@@ -22,6 +22,8 @@ HEADLINES=(
   Dynamics.prob.chernoff.avg_exp_le
   Dynamics.prob.chernoff.avg_tail_ge_ln_le
   Dynamics.prob.chernoff.avg_tail_le_ln_ge
+  Dynamics.rumor.main.push_informs_all_whp
+  Dynamics.rumor.main.push_informs_all_whp'
 )
 
 ACCEPTED_AXIOMS=(

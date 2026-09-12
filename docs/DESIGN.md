@@ -163,3 +163,7 @@ papers in `reference/leanamycs/*/latex/` remain the informal proofs.
   annotated `(family F : simpl_pred (Tgt n))`. Also shadowed: `finset.in_setC`.
 - In `ring_scope`, a `nat` equation `... = 2` parses the literal as `2%:R : nat`; write `2%N`.
 - An unnamed `have : T by ...` pushes `T` onto the goal, not the context; name numeric facts.
+- `have := f _; last by lra` is a trap: an unfilled `_` in `have :=` becomes a premise of the
+  hypothesis, not a subgoal (harmless before `lra`, which handles implication-shaped facts).
+- `ln 2 <= 7/10` (needed by `numeric_B`) comes from `expR_ge_series 4` at `7/10` plus
+  `-(expRK _) ler_ln ?posrE ?expR_gt0`; `c ^+ m = expR (m%:R * ln c)` via `expRM_natl lnK`.
