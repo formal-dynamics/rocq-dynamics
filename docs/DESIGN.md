@@ -111,3 +111,14 @@ papers in `reference/leanamycs/*/latex/` remain the informal proofs.
   `card_ffun`, `natrX`, `prodr_const`, `exprVn`.
 - Empty sample spaces: MathComp's `x / 0 = 0` gives the same `avg = 0` convention
   as Lean; nonemptiness is the hypothesis `(0 < #|T|)%N`.
+- A comparison whose two sides are both casts (`n%:R <= #|I|%:R`, `1 <= n%:R - ...`,
+  `500 * ln n%:R <= n%:R / 4`) has no anchor for the ring: write `... :> R`.
+- A `nat`-valued definition that depends on `R` only through `ln` (`T2a`) gets an
+  uninferable implicit `R` under `Set Implicit Arguments`; `Arguments T2a : clear implicits`.
+- `rewrite avg_prod_ffun` cannot infer `f` from `expR (t * Y i (x i))` (metavariable applied
+  to `x i`); instantiate it: `rewrite -(avg_prod_ffun (fun i y => expR (t * Y i y)))`,
+  then `congr avg; apply/funext`. Same for replacing a lambda under `avg`.
+- `case: (leP k (X x))` with explicit arguments (otherwise `leP` grabs the goal's outer
+  `<=`); `-[leLHS]expR0 ler_expR` then `nra` proves `1 <= expR (...)`.
+- `lra`/`nra` treat `expR t`, `ln x`, `m^-1` as atoms; they close most real side goals
+  once the transcendental facts are in the context.

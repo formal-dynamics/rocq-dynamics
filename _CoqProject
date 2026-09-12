@@ -18,3 +18,8 @@ theories/rumor/oneround.v
 theories/rumor/growth.v
 theories/rumor/saturation.v
 theories/rumor/main.v
+theories/majority/model.v
+theories/majority/oneround.v
+theories/majority/growth.v
+theories/majority/saturation.v
+theories/majority/main.v
