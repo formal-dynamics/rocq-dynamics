@@ -12,17 +12,21 @@
     - Classical logic is mathcomp-classical's [boolp]; the only axioms any
       theorem may depend on are the three [boolp] axioms (see verify.sh). *)
 
-From HB Require Import structures.
-From mathcomp Require Import all_ssreflect all_algebra.
-From mathcomp Require Import boolp classical_sets reals sequences exp.
-From mathcomp Require Import ring lra zify.
+(* [Export] rather than [Import]: files that [Require Import prelude] get the
+   whole stack, the algebra theory modules and [ring_scope] for free. Each file
+   still repeats the three [Implicit Arguments] option lines, which are
+   file-local by design. *)
+From HB Require Export structures.
+From mathcomp Require Export all_ssreflect all_algebra.
+From mathcomp Require Export boolp classical_sets reals sequences exp.
+From mathcomp Require Export ring lra zify.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Import Order.TTheory GRing.Theory Num.Def Num.Theory.
-Local Open Scope ring_scope.
+Export Order.TTheory GRing.Theory Num.Def Num.Theory.
+Open Scope ring_scope.
 
 (** ** Smoke checks
 

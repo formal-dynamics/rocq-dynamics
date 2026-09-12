@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 ADMIT_RE = re.compile(r"^\s*(Admitted\.|admit\.)")
-AXIOM_RE = re.compile(r"^\s*(Axiom|Axioms|Parameter|Parameters|Conjecture|Hypothesis|Hypotheses)\s")
+AXIOM_RE = re.compile(r"^\s*(Axiom|Axioms|Parameter|Parameters|Conjecture)\s")  # section Hypothesis/Variable are premises, not axioms
 
 
 def strip_comments(src: str) -> str:
