@@ -23,13 +23,16 @@ HEADLINES=(
   Dynamics.prob.chernoff.avg_tail_ge_ln_le
   Dynamics.prob.chernoff.avg_tail_le_ln_ge
   Dynamics.rumor.main.push_informs_all_whp
-  Dynamics.rumor.main.push_informs_all_whp'
+  "Dynamics.rumor.main.push_informs_all_whp'"
+  Dynamics.majority.main.majority3_consensus_whp
+  Dynamics.majority.main.majority3_consensus_fail_le_clean
 )
 
+# Printed with or without the `boolp.` qualifier depending on what is in scope.
 ACCEPTED_AXIOMS=(
-  boolp.functional_extensionality_dep
-  boolp.propositional_extensionality
-  boolp.constructive_indefinite_description
+  functional_extensionality_dep
+  propositional_extensionality
+  constructive_indefinite_description
 )
 
 if [[ "${1:-}" != "--no-clean" ]]; then
