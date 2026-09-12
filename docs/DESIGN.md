@@ -44,7 +44,7 @@ processes (`rumor` and `majority` are parallel leaves of the layering).
 | `Fintype α` | `T : finType` | |
 | `Finset (Fin n)` | `{set 'I_n}` | `cardsU`, `imsetP`, `inE` |
 | `Fin n → β` (a round) | `{ffun 'I_n -> B}` | finType when `B` is; `ffunE`, `card_ffun` |
-| `Tgt n := ∀ v : Fin n, {u // u ≠ v}` | `{ffun 'I_n -> 'I_n}` restricted by `[forall v, f v != v]`, packaged as a `subFinType` (or `{ffun 'I_n -> 'I_n.-1}` composed with `lift`) | pick whichever makes `card_tgt : #|Tgt n| = (n-1)^n` and `avg_not_contacted` easiest |
+| `Tgt n := ∀ v : Fin n, {u // u ≠ v}` | `{dffun forall v : 'I_n, {u : 'I_n \| u != v}}` (dependent finfun, a `finType`; `Notation Tgt n`) | decided 2026-09-12: exactly Lean's type; `card_dep_ffun`/`card_sig` give `#|Tgt n| = (n-1)^n` |
 | `Tgt3 n := Fin n → Fin n × Fin n × Fin n` | `{ffun 'I_n -> 'I_n * 'I_n * 'I_n}` | |
 | `step I r = I ∪ I.image r` | `I :|: [set r v \| v in I]` | |
 | `run I l` (`List` fold) | `foldl (fun I r => step I r) I s` on `seq` | keep `run_cat` = `run_append` |
@@ -84,9 +84,30 @@ papers in `reference/leanamycs/*/latex/` remain the informal proofs.
 
 ## 3. Open questions
 
-- `Tgt n` representation (D3): subtype of `{ffun 'I_n -> 'I_n}` vs `{ffun 'I_n -> 'I_n.-1}`
-  with `lift v`. Decide when porting `OneRound.card_tgt`.
 - Whether to keep Lean's `expList` or state everything over the product space
   `{ffun 'I_T -> Tgt n}` directly (Lean proves both agree in `Equivalence.lean`).
   Start with `expList` (conditioning is definitional), port `Equivalence` last.
-- `Num.ceil` returns `int`; the cleanest way to state `⌈117 ln n⌉ + 23` as a `nat`.
+- `Num.ceil` returns `int`; `ceiln x := `|Num.ceil x|` (currently in `rumor/main.v`) is Lean's
+  `Nat.ceil` for `x >= 0`; move it to the prelude once the prelude is next rebuilt.
+- The prelude exports `classical_sets`, whose `set0`/`setT`/`set1` shadow finset's; the rumor
+  files write `finset.set0` for now. Drop `classical_sets` from the prelude exports at the next
+  prelude rebuild (only `boolp`, `reals`, `sequences`, `exp` are needed).
+
+## 4. Lessons from the first proofs (keep adding)
+
+- The prelude must `Require Export` (not `Import`) the libraries, and `Export` the
+  theory modules, otherwise downstream files do not even see `realType`.
+- In `ring_scope`, `nat` comparisons need `%N` (`(n <= m)%N`), and a boolean
+  indicator under `%:R` must be scoped: `((k <= x)%R)%:R`, because the argument of
+  `%:R` is parsed in `nat_scope`.
+- `rewrite foo` picks the first matching subterm; use `[in RHS]foo`,
+  `[in X in X / _]foo` or `-[c *+ _]foo` to aim (bit us in `avg_ind`, `avg_const`).
+- `case: (P a)` does not see `P a` hidden inside `[pred a | P a] a`; `rewrite inE`
+  (or `/=`) first.
+- Rewriting with a higher-order pattern only works when the metavariable is applied
+  to bound variables: `pair_bigA` must be used left-to-right after `big_distrlr`,
+  `rewrite -pair_bigA` fails.
+- Lean's hand-rolled `avg_prod_pi` is MathComp's `bigA_distr_bigA` plus
+  `card_ffun`, `natrX`, `prodr_const`, `exprVn`.
+- Empty sample spaces: MathComp's `x / 0 = 0` gives the same `avg = 0` convention
+  as Lean; nonemptiness is the hypothesis `(0 < #|T|)%N`.

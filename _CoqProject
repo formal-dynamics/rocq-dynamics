@@ -13,3 +13,8 @@ theories/prob/avg.v
 theories/prob/indep.v
 theories/prob/bounds.v
 theories/prob/chernoff.v
+theories/rumor/model.v
+theories/rumor/oneround.v
+theories/rumor/growth.v
+theories/rumor/saturation.v
+theories/rumor/main.v

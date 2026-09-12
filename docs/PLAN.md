@@ -43,6 +43,15 @@ every checkpoint commit that changes it. Decisions referenced as D1… are in
 | File | Statements ported | Admitted remaining | Notes |
 |---|---:|---:|---|
 | `theories/prelude.v` | – | 0 | smoke lemmas; `make gate` and `verify.sh` green (M0 done 2026-09-11) |
+| `theories/prob/avg.v` | 19/19 | 0 | proved 2026-09-12 |
+| `theories/prob/indep.v` | 6/6 | 0 | proved 2026-09-12; `bigA_distr_bigA` replaces Lean's hand induction |
+| `theories/prob/bounds.v` | 12/12 | 12 | proofs in progress |
+| `theories/prob/chernoff.v` | 7/7 | 7 | proofs in progress |
+| `theories/rumor/model.v` | 16/16 | 15 | skeletons compile 2026-09-12; `Tgt n` is a dependent finfun |
+| `theories/rumor/oneround.v` | 7/7 | 7 | skeletons compile |
+| `theories/rumor/growth.v` | 3/3 | 3 | skeletons compile |
+| `theories/rumor/saturation.v` | 1/1 | 1 | skeletons compile |
+| `theories/rumor/main.v` | 7/7 | 6 | skeletons compile; `ceiln` = Lean `Nat.ceil` (move to prelude later) |
 
 ## Working agreements
 
