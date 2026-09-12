@@ -19,11 +19,6 @@ Local Open Scope ring_scope.
 Section Main.
 Context {R : realType}.
 
-(** Lean's [⌈x⌉₊] ([Nat.ceil]) for [x >= 0]: the natural number
-    [|Num.ceil x|]. (For negative [x] the two differ, but every use below has
-    [x = c * ln n >= 0].) *)
-Definition ceiln (x : R) : nat := `|Num.ceil x|.
-
 Variable n : nat.
 
 (** Lean: [prNotAllInformed n v₀ T] — probability that not all nodes are

@@ -8,13 +8,13 @@ every checkpoint commit that changes it. Decisions referenced as D1… are in
 
 | # | Milestone | Done when |
 |---|---|---|
-| M0 | Toolchain + repo skeleton | `make gate` green on `theories/prelude.v`; CI green; tooling documented in `docs/study/` |
-| M1 | Probability layer, statements | `theories/prob/{avg,indep,bounds,chernoff}.v` compile with `Admitted` skeletons for every Lean declaration of `Prob.lean`, `Bounds.lean`, `Chernoff.lean` (both projects, deduplicated) |
-| M2 | Probability layer, proofs | M1 files `Admitted`-free; `verify.sh` audits `avg_exp_le`, `avg_tail_ge_log`, `avg_tail_le_log` |
-| M3 | Rumor spreading, statements | `theories/rumor/{model,oneround,growth,saturation,main}.v` skeletons compile; statements reviewed against Lean |
-| M4 | Rumor spreading, proofs | `push_informs_all_whp` proved, audited |
-| M5 | 3-majority, statements | `theories/majority/{model,oneround,growth,saturation,main}.v` skeletons compile |
-| M6 | 3-majority, proofs | `majority3_consensus_whp` proved, audited |
+| M0 ✅ | Toolchain + repo skeleton | `make gate` green on `theories/prelude.v`; CI green; tooling documented in `docs/study/` |
+| M1 ✅ | Probability layer, statements | `theories/prob/{avg,indep,bounds,chernoff}.v` compile with `Admitted` skeletons for every Lean declaration of `Prob.lean`, `Bounds.lean`, `Chernoff.lean` (both projects, deduplicated) |
+| M2 ✅ | Probability layer, proofs | M1 files `Admitted`-free; `verify.sh` audits `avg_exp_le`, `avg_tail_ge_log`, `avg_tail_le_log` |
+| M3 ✅ | Rumor spreading, statements | `theories/rumor/{model,oneround,growth,saturation,main}.v` skeletons compile; statements reviewed against Lean |
+| M4 ✅ | Rumor spreading, proofs | `push_informs_all_whp` proved, audited |
+| M5 ✅ | 3-majority, statements | `theories/majority/{model,oneround,growth,saturation,main}.v` skeletons compile |
+| M6 ✅ | 3-majority, proofs | `majority3_consensus_whp` proved, audited |
 | M7 | Blueprint + Pages | `rocqblueprint` site mirroring both Lean blueprints, deployed; coqdoc |
 | M8 | Faithfulness audit | `docs/LEAN_TO_ROCQ.md` maps every Lean declaration to its Rocq counterpart; `Equivalence.lean` ported |
 
@@ -55,7 +55,7 @@ every checkpoint commit that changes it. Decisions referenced as D1… are in
 | `theories/majority/model.v` | 13/13 | 10 | skeletons compile 2026-09-12 |
 | `theories/majority/oneround.v` | 18/18 | 0 | proved 2026-09-12 (agent) |
 | `theories/majority/growth.v` | 10/10 | 0 | proved 2026-09-12 (agent) |
-| `theories/majority/saturation.v` | 17/17 | 14 | skeletons compile; `T2a n R` takes `R` explicitly |
+| `theories/majority/saturation.v` | 17/17 (+2 Padé helpers) | 0 | proved 2026-09-12 (agent); **M6 done**: `majority3_consensus_whp` audited |
 | `theories/majority/main.v` | 7/7 | 0 | proved 2026-09-12; numerics avoid Lean's `11!` (large literals overflow) |
 
 ## Working agreements

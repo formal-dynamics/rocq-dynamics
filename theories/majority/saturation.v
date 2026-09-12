@@ -64,10 +64,6 @@ Variable n : nat.
 Context {R : realType}.
 Implicit Types (I : {set 'I_n}).
 
-(** Lean's [⌈x⌉₊] for [x >= 0] (duplicate of [Dynamics.rumor.main.ceiln];
-    both move to the prelude at its next rebuild). *)
-Definition ceiln (x : R) : nat := `|Num.ceil x|.
-
 (** Lean: [saturation_round_generic] — per-round upper tail from an upper
     bound on the mean dissent. *)
 Lemma saturation_round_generic I (mub k : R) :
@@ -248,7 +244,7 @@ by rewrite -[j.+1%:R]natr1; lra.
 Qed.
 
 (** Lean: [T2a n = ⌈6 log n⌉₊]. *)
-Definition T2a : nat := ceiln (6 * ln n%:R).
+Definition T2a : nat := ceiln (6 * ln (n%:R : R)).
 
 (** Lean: [satAfter_quarter_le_floor]. *)
 Lemma satAfter_quarter_le_floor :

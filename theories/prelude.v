@@ -18,7 +18,7 @@
    file-local by design. *)
 From HB Require Export structures.
 From mathcomp Require Export all_ssreflect all_algebra.
-From mathcomp Require Export boolp classical_sets reals sequences exp.
+From mathcomp Require Export boolp reals sequences exp.
 From mathcomp Require Export ring lra zify.
 
 Set Implicit Arguments.
@@ -54,6 +54,15 @@ Proof. by move=> x0 x1; nra. Qed.
 
 Lemma prelude_lia (n m : nat) : (n <= m)%N -> (n.*2 <= m + m)%N.
 Proof. by move=> ?; lia. Qed.
+
+(** ** Shared helper: Lean's [⌈x⌉₊] ([Nat.ceil]) for [x >= 0]
+
+    [ceiln x = |Num.ceil x|]; for [x >= 0] this is exactly [Nat.ceil]. Every
+    use in the development has [x = c * ln n >= 0]. *)
+Section Ceiln.
+Context {R : realType}.
+Definition ceiln (x : R) : nat := `|Num.ceil x|.
+End Ceiln.
 
 (** The headline of the smoke layer, audited by [verify.sh]. *)
 Lemma prelude_smoke (R : realType) : expR (0 : R) + ln 1 = 1.

@@ -87,11 +87,10 @@ papers in `reference/leanamycs/*/latex/` remain the informal proofs.
 - Whether to keep Lean's `expList` or state everything over the product space
   `{ffun 'I_T -> Tgt n}` directly (Lean proves both agree in `Equivalence.lean`).
   Start with `expList` (conditioning is definitional), port `Equivalence` last.
-- `Num.ceil` returns `int`; `ceiln x := `|Num.ceil x|` (currently in `rumor/main.v`) is Lean's
-  `Nat.ceil` for `x >= 0`; move it to the prelude once the prelude is next rebuilt.
-- The prelude exports `classical_sets`, whose `set0`/`setT`/`set1` shadow finset's; the rumor
-  files write `finset.set0` for now. Drop `classical_sets` from the prelude exports at the next
-  prelude rebuild (only `boolp`, `reals`, `sequences`, `exp` are needed).
+- `Num.ceil` returns `int`; `ceiln x := `|Num.ceil x|` (in the prelude) is Lean's `Nat.ceil` for
+  `x >= 0`; brackets `ceiln_ge`/`ceiln_lt` live in `rumor/main.v`.
+- Done 2026-09-12: `classical_sets` is no longer exported by the prelude (it shadowed finset's
+  `set0`/`subsetP`/`subsetT`/...); the `finset.`/`fintype.` qualifications left in proofs are harmless.
 
 ## 4. Lessons from the first proofs (keep adding)
 
