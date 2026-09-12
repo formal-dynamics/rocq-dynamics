@@ -138,3 +138,11 @@ papers in `reference/leanamycs/*/latex/` remain the informal proofs.
 - Nested product cardinalities need `!card_prod !card_ord !muln_gt0`; a single `card_prod`
   leaves an inner `#|'I_n * 'I_n|` and `done` fails with "No applicable tactic".
 - `rewrite (avg_mul_prod g h)` with `g`, `h` given matches the goal's lambda up to beta.
+- `avg f` unfolds to a product, so `rewrite mulrC` may silently hit it; prefer feeding
+  `nra` the facts (it treats `avg (...)`, `c^+k` as atoms).
+- `lia` can fail across re-elaborated set terms (`#|...|` with different `mem` instances);
+  close with MathComp lemmas up to conversion instead (`apply: leq_trans h; rewrite ltn_Pmull`).
+- Section lemmas with `Context {R : realType}` leave a stray `forall R` when applied to
+  hypotheses only: pass `(R := R)`. `expList_le k F G` takes `k` explicitly.
+- `ltr_eXn2l`/`ler_weXn2l` compare powers with the same base; `2^+L * (1/2)^+c >= 1` via
+  `-[leLHS](expr1n _ c)`, `exprMn`, `ler_wpM2r`. No `set10`: use `-card_gt0 cards1`.
