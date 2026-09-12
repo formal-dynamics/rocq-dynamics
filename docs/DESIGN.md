@@ -146,3 +146,15 @@ papers in `reference/leanamycs/*/latex/` remain the informal proofs.
   hypotheses only: pass `(R := R)`. `expList_le k F G` takes `k` explicitly.
 - `ltr_eXn2l`/`ler_weXn2l` compare powers with the same base; `2^+L * (1/2)^+c >= 1` via
   `-[leLHS](expr1n _ c)`, `exprMn`, `ler_wpM2r`. No `set10`: use `-card_gt0 cards1`.
+- Large numerals overflow: `39916800 : R` is a unary `nat` under the hood (stack overflow).
+  Keep factorials symbolic and expand them with `!factS fact0 !natrM`, and constant powers
+  with `!exprS expr0`; `lra` evaluates the resulting products. `majority/main.v` uses the
+  degree-14 and degree-5 Taylor terms instead of Lean's `11!` for this reason.
+- `apply:`/`exact:` can fail on an unanchored `have : 0 <= 300 / n%:R` even when the goal
+  looks identical: always write `:> R`. `divr_ge0`, `addr_ge0`, `mulr_ge0` are implications,
+  not rewrite rules (`apply: divr_ge0; rewrite ler0n`).
+- `set x := e` fails when `e` is not literally in the goal (`-(1/10^7) * n` vs `(1/10^7) * n`):
+  `pose x : R := e` (with the type) and `have -> : ... = - x`.
+- `lra` needs the sign of quotient atoms (`0 <= 1 / n%:R`) to be supplied explicitly.
+- `set L := ln n%:R in h1 h2 *` is required to keep `lra` seeing the same atom everywhere;
+  section hypotheses cannot be rewritten, so make numeric facts lemma premises.
