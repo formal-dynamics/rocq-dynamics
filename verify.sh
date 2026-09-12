@@ -50,7 +50,7 @@ for h in "${HEADLINES[@]}"; do
   echo "Print Assumptions $h." >> "$probe"
 done
 
-out="$(rocq repl -q -R theories Dynamics -batch -l "$probe" 2>&1)" || {
+out="$(rocq repl -q -w none -R theories Dynamics -batch -l "$probe" 2>&1)" || {
   echo "$out"; echo "verify.sh: rocq repl failed"; exit 1; }
 echo "$out"
 
