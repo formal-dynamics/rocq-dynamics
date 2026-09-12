@@ -45,7 +45,7 @@ every checkpoint commit that changes it. Decisions referenced as D1… are in
 | `theories/prelude.v` | – | 0 | smoke lemmas; `make gate` and `verify.sh` green (M0 done 2026-09-11) |
 | `theories/prob/avg.v` | 19/19 | 0 | proved 2026-09-12 |
 | `theories/prob/indep.v` | 6/6 | 0 | proved 2026-09-12; `bigA_distr_bigA` replaces Lean's hand induction |
-| `theories/prob/bounds.v` | 12/12 | 12 | proofs in progress |
+| `theories/prob/bounds.v` | 12/12 (+2 helpers) | 0 | proved 2026-09-12 (agent); M2 complete |
 | `theories/prob/chernoff.v` | 7/7 | 0 | proved 2026-09-12 (agent, 3 compile iterations) |
 | `theories/rumor/model.v` | 16/16 | 15 | skeletons compile 2026-09-12; `Tgt n` is a dependent finfun |
 | `theories/rumor/oneround.v` | 7/7 | 7 | skeletons compile |

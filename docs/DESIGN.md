@@ -122,3 +122,14 @@ papers in `reference/leanamycs/*/latex/` remain the informal proofs.
   `<=`); `-[leLHS]expR0 ler_expR` then `nra` proves `1 <= expR (...)`.
 - `lra`/`nra` treat `expR t`, `ln x`, `m^-1` as atoms; they close most real side goals
   once the transcendental facts are in the context.
+- MathComp has no Bernoulli inequality and no `sum_le_exp_of_nonneg`; `bounds.v` proves
+  `one_sub_mul_le_pow` by induction (`nra` steps; the regime `1 < x <= 2` via `normrX`,
+  `exprn_ile1`, `ler_norml`) and adds `expR_ge_series`/`expR_ge_taylor2` from
+  `nondecreasing_cvgn_le`, `nondecreasing_series`, `is_cvg_series_exp_coeff`.
+- `lra`/`nra` treat `k`!%:R` as opaque; convert factorials to numerals first
+  (`rewrite (_ : 3`!%:R = 6 :> R) //`). `rewrite exprS` picks the first `_ ^+ _.+1`; aim it
+  with `[(1 - x) ^+ _]exprS`.
+- Mathlib ↔ MathComp-Analysis dictionary for logs: `log_le_sub_one_of_pos` ↔ `le_ln1Dx`,
+  `log_inv` ↔ `lnV ?posrE`, `log_div` ↔ `ln_div ?posrE`, `log_exp` ↔ `expRK`,
+  `exp_neg` ↔ `expRN`, `log_le_log` ↔ `ler_ln ?posrE`, `exp_nat_mul` ↔ `expRM_natl`,
+  `exp_one_gt_d9` ↔ `expR_ge_series 6` (gives `163/60 <= expR 1`); `ln 0 = 0` is `ln0`.

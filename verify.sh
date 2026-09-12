@@ -17,6 +17,8 @@ HEADLINES=(
   Dynamics.prelude.prelude_smoke
   Dynamics.prob.avg.expList_cat
   Dynamics.prob.indep.avg_prod_ffun
+  Dynamics.prob.bounds.ln_ln_le
+  Dynamics.prob.bounds.one_sub_mul_le_pow
   Dynamics.prob.chernoff.avg_exp_le
   Dynamics.prob.chernoff.avg_tail_ge_ln_le
   Dynamics.prob.chernoff.avg_tail_le_ln_ge
