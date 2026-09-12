@@ -108,7 +108,7 @@ Qed.
 
 (** Lean: [numeric_A]. *)
 Lemma numeric_A :
-  (2 <= n)%N -> n%:R <= (9 / 8 : R) ^+ (ceiln (9 * ln n%:R) + 1).
+  (2 <= n)%N -> n%:R <= (9 / 8 : R) ^+ (ceiln (9 * ln (n%:R : R)) + 1).
 Proof.
 move=> hn.
 have n1 : 1 < n%:R :> R by rewrite ltr1n.
@@ -129,7 +129,7 @@ Qed.
 (** Lean: [numeric_B]. *)
 Lemma numeric_B :
   (2 <= n)%N ->
-  2 ^+ (ceiln (9 * ln n%:R) + 1) * (15 / 16 : R) ^+ (ceiln (117 * ln n%:R) + 23)
+  2 ^+ (ceiln (9 * ln (n%:R : R)) + 1) * (15 / 16 : R) ^+ (ceiln (117 * ln (n%:R : R)) + 23)
     <= 1 / n%:R.
 Proof.
 move=> hn.
@@ -164,7 +164,7 @@ Qed.
 
 (** Lean: [numeric_C]. *)
 Lemma numeric_C :
-  (2 <= n)%N -> (2 / 3 : R) ^+ ceiln (6 * ln n%:R) * n%:R <= 1 / n%:R.
+  (2 <= n)%N -> (2 / 3 : R) ^+ ceiln (6 * ln (n%:R : R)) * n%:R <= 1 / n%:R.
 Proof.
 move=> hn.
 have n1 : 1 < n%:R :> R by rewrite ltr1n.
@@ -188,7 +188,7 @@ Qed.
 (** Lean: [push_informs_all_whp] — the main theorem. *)
 Theorem push_informs_all_whp (v0 : 'I_n) :
   (2 <= n)%N ->
-  prNotAllInformed v0 ((ceiln (117 * ln n%:R) + 23) + ceiln (6 * ln n%:R))
+  prNotAllInformed v0 ((ceiln (117 * ln (n%:R : R)) + 23) + ceiln (6 * ln (n%:R : R)))
     <= 2 / n%:R.
 Proof.
 move=> hn.
@@ -202,13 +202,13 @@ Qed.
 Theorem push_informs_all_whp' (v0 : 'I_n) :
   (2 <= n)%N ->
   1 - 2 / n%:R
-    <= expList ((ceiln (117 * ln n%:R) + 23) + ceiln (6 * ln n%:R))
+    <= expList ((ceiln (117 * ln (n%:R : R)) + 23) + ceiln (6 * ln (n%:R : R)))
          (fun s : seq (Tgt n) => (run [set v0] s == [set: 'I_n])%:R : R).
 Proof.
 move=> hn.
 have T0 := tgt_gt0 hn.
 have hfail := push_informs_all_whp v0 hn.
-set T := ((ceiln (117 * ln n%:R) + 23) + ceiln (6 * ln n%:R))%N in hfail *.
+set T := ((ceiln (117 * ln (n%:R : R)) + 23) + ceiln (6 * ln (n%:R : R)))%N in hfail *.
 have hsum :
     expList T (fun s : seq (Tgt n) => (run [set v0] s == [set: 'I_n])%:R : R)
     + prNotAllInformed v0 T = 1.
