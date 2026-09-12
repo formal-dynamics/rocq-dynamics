@@ -1,0 +1,55 @@
+name: Build
+
+# Gating CI: cheap static gates first, then a full Rocq build and the axiom
+# audit (verify.sh) inside the MathComp Docker image the LLM4Rocq projects use.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check the import layering
+        run: python3 scripts/check_layers.py
+
+      - name: No Admitted / admit / Axiom in theories
+        run: python3 scripts/check_admitted.py
+
+      - uses: coq-community/docker-coq-action@v1
+        with:
+          # MathComp 2.5.0 on Rocq 9.1 (tag used by LLM4Rocq/digraph-theory CI).
+          custom_image: 'mathcomp/mathcomp:2.5.0-rocq-prover-9.1'
+          install: |
+            startGroup "Install dependencies"
+              opam repo add rocq-released https://rocq-prover.org/opam/released || true
+              opam update -y
+              opam install -y \
+                rocq-mathcomp-classical.1.16.0 rocq-mathcomp-reals.1.16.0 \
+                rocq-mathcomp-analysis.1.16.0 \
+                coq-mathcomp-algebra-tactics.1.2.7 coq-mathcomp-zify
+            endGroup
+          before_script: |
+            startGroup "Workaround permission issue"
+              sudo chown -R "$(id -u):$(id -g)" .
+            endGroup
+          script: |
+            startGroup "Build"
+              make -j2
+            endGroup
+            startGroup "Axiom audit"
+              ./verify.sh --no-clean
+            endGroup
+          after_script: |
+            startGroup "Restore permissions"
+              sudo chown -R 1001:116 . || true
+            endGroup

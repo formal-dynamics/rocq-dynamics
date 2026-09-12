@@ -1,0 +1,44 @@
+# Rocq build products
+*.vo
+*.vok
+*.vos
+*.glob
+*.aux
+.*.aux
+.coq-native/
+.lia.cache
+.nia.cache
+.nra.cache
+.lra.cache
+CoqMakefile
+CoqMakefile.conf
+.CoqMakefile.d
+Makefile.coq
+Makefile.coq.conf
+.Makefile.coq.d
+_RocqProject
+html/
+
+# rocq-mcp / agent scratch
+rocq_mcp_cache_*.v
+scratch/
+.claude/
+!.claude/agents/
+
+# Python / tooling
+__pycache__/
+*.pyc
+.venv/
+_opam/
+_build/
+
+# blueprint / site build products
+blueprint/src/web/
+blueprint/src/print/
+blueprint/lean_decls
+site/
+
+# editors / OS
+.vscode/
+*~
+.DS_Store

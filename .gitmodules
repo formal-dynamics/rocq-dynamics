@@ -1,0 +1,3 @@
+[submodule "reference/leanamycs"]
+	path = reference/leanamycs
+	url = https://github.com/formal-dynamics/leanamycs.git

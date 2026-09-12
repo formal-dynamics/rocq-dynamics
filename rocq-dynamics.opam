@@ -1,0 +1,45 @@
+opam-version: "2.0"
+name: "rocq-dynamics"
+version: "dev"
+synopsis: "Opinion dynamics on the complete graph in Rocq/MathComp: rumor spreading and 3-majority w.h.p."
+description: """
+Rocq port of the Lean 4 + Mathlib monorepo formal-dynamics/leanamycs: a minimal
+finite-probability layer (uniform averages over finite types, no measure theory),
+a self-contained Chernoff bound, rumor spreading (uniform push) on K_n in
+O(log n) rounds w.h.p., and 3-majority consensus in O(log n) rounds w.h.p.
+Built on MathComp and mathcomp-analysis (real numbers, exp, ln).
+"""
+maintainer: "Emanuele Natale <emanuele.natale@inria.fr>"
+authors: ["Emanuele Natale" "Marc Lelarge"]
+license: "Apache-2.0"
+homepage: "https://github.com/formal-dynamics/rocq-dynamics"
+bug-reports: "https://github.com/formal-dynamics/rocq-dynamics/issues"
+dev-repo: "git+https://github.com/formal-dynamics/rocq-dynamics.git"
+build: [[ make "-j%{jobs}%" ]]
+install: [[ make "install" ]]
+depends: [
+  # Validated snapshot (2026-09-10, the LLM4Rocq org standard):
+  #   Rocq 9.1.1, MathComp 2.5.0, mathcomp-classical/reals/analysis 1.16.0,
+  #   hierarchy-builder 1.10.2, algebra-tactics 1.2.7, coq-lsp 0.2.5+9.1.
+  # Rocq is held below 9.2 because the released coq-lsp (petanque, used by
+  # rocq-mcp) requires rocq-core >= 9.1 < 9.2.
+  "rocq-core"                    { >= "9.1" & < "9.2~" }
+  "rocq-stdlib"                  { >= "9.1" & < "9.2~" }
+  "rocq-mathcomp-ssreflect"      { >= "2.5.0" & < "2.6~" }
+  "rocq-mathcomp-fingroup"       { >= "2.5.0" & < "2.6~" }
+  "rocq-mathcomp-algebra"        { >= "2.5.0" & < "2.6~" }
+  "rocq-mathcomp-classical"      { >= "1.16.0" & < "1.17~" }
+  "rocq-mathcomp-reals"          { >= "1.16.0" & < "1.17~" }
+  "rocq-mathcomp-analysis"       { >= "1.16.0" & < "1.17~" }
+  "rocq-hierarchy-builder"       { >= "1.10.0" }
+  "coq-mathcomp-algebra-tactics" { >= "1.2.7" }
+  "coq-mathcomp-zify"
+]
+tags: [
+  "logpath:Dynamics"
+  "keyword:probability"
+  "keyword:opinion dynamics"
+  "keyword:rumor spreading"
+  "keyword:Chernoff bound"
+  "keyword:distributed computing"
+]

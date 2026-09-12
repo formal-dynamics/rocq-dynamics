@@ -1,0 +1,11 @@
+-R theories Dynamics
+-arg -w -arg -notation-overridden,-ambiguous-paths
+-arg -w -arg -deprecated-since-mathcomp-analysis-1.9.0
+-arg -w -arg -deprecated-since-mathcomp-2.5.0
+
+# Import layers (enforced by scripts/check_layers.py):
+#   prelude  <  prob  <  rumor | majority
+# `rumor` and `majority` are parallel: neither imports the other.
+# List files in dependency order; every new .v file must be added here.
+
+theories/prelude.v
