@@ -48,7 +48,7 @@ every checkpoint commit that changes it. Decisions referenced as D1… are in
 | `theories/prob/bounds.v` | 12/12 (+2 helpers) | 0 | proved 2026-09-12 (agent); M2 complete |
 | `theories/prob/chernoff.v` | 7/7 | 0 | proved 2026-09-12 (agent, 3 compile iterations) |
 | `theories/rumor/model.v` | 16/16 | 15 | skeletons compile 2026-09-12; `Tgt n` is a dependent finfun |
-| `theories/rumor/oneround.v` | 7/7 | 7 | skeletons compile |
+| `theories/rumor/oneround.v` | 7/7 (+1 helper) | 0 | proved 2026-09-12 (agent) |
 | `theories/rumor/growth.v` | 3/3 | 0 | proved 2026-09-12 (agent) |
 | `theories/rumor/saturation.v` | 1/1 | 0 | proved 2026-09-12 (agent) |
 | `theories/rumor/main.v` | 7/7 | 6 | skeletons compile; `ceiln` = Lean `Nat.ceil` (move to prelude later) |

@@ -158,3 +158,8 @@ papers in `reference/leanamycs/*/latex/` remain the informal proofs.
 - `lra` needs the sign of quotient atoms (`0 <= 1 / n%:R`) to be supplied explicitly.
 - `set L := ln n%:R in h1 h2 *` is required to keep `lra` seeing the same atom everywhere;
   section hypotheses cannot be rewritten, so make numeric facts lemma premises.
+- Dependent-finfun counting: `card_dep_ffun`/`card_family` return a `foldr muln` over `enum`;
+  `rumor/oneround.v` adds `foldr_muln_map` to turn it into `\prod_(v <- s)`. `family F` must be
+  annotated `(family F : simpl_pred (Tgt n))`. Also shadowed: `finset.in_setC`.
+- In `ring_scope`, a `nat` equation `... = 2` parses the literal as `2%:R : nat`; write `2%N`.
+- An unnamed `have : T by ...` pushes `T` onto the goal, not the context; name numeric facts.
