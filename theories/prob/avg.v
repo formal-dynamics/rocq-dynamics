@@ -32,42 +32,52 @@ Definition avg {T} (f : T -> R) : R := (\sum_(a : T) f a) / #|T|%:R.
 
 (** Lean: [avg_nonneg]. *)
 Lemma avg_ge0 T (f : T -> R) : (forall a, 0 <= f a) -> 0 <= avg f.
-Proof. Admitted.
+Proof.
+by move=> f0; rewrite /avg divr_ge0 ?ler0n //; apply: sumr_ge0.
+Qed.
 
 (** Lean: [avg_le_avg] (this is Markov's inequality in disguise). *)
 Lemma avg_le T (f g : T -> R) : (forall a, f a <= g a) -> avg f <= avg g.
-Proof. Admitted.
+Proof.
+move=> fg; rewrite /avg; apply: ler_wpM2r; first by rewrite invr_ge0 ler0n.
+exact: ler_sum.
+Qed.
 
 (** Lean: [avg_add]. *)
 Lemma avgD T (f g : T -> R) : avg (fun a => f a + g a) = avg f + avg g.
-Proof. Admitted.
+Proof. by rewrite /avg big_split mulrDl. Qed.
 
 (** Lean: [avg_sub]. *)
 Lemma avgB T (f g : T -> R) : avg (fun a => f a - g a) = avg f - avg g.
-Proof. Admitted.
+Proof. by rewrite /avg sumrB mulrBl. Qed.
 
 (** Lean: [avg_const_mul]. *)
 Lemma avgZ T (c : R) (f : T -> R) : avg (fun a => c * f a) = c * avg f.
-Proof. Admitted.
+Proof. by rewrite /avg -mulr_sumr mulrA. Qed.
 
 (** Lean: [avg_sum] — the average of a finite sum is the sum of the averages. *)
 Lemma avg_sum T (I : Type) (r : seq I) (P : pred I) (f : I -> T -> R) :
   avg (fun a => \sum_(i <- r | P i) f i a) = \sum_(i <- r | P i) avg (f i).
-Proof. Admitted.
+Proof. by rewrite /avg exchange_big /= mulr_suml. Qed.
 
 (** Lean: [avg_indicator] — the expectation of an indicator is a counting
     ratio. The indicator of a boolean is written [b%:R]. *)
 Lemma avg_ind T (P : pred T) :
   avg (fun a => (P a)%:R : R) = #|[pred a | P a]|%:R / #|T|%:R.
-Proof. Admitted.
+Proof.
+rewrite /avg; congr (_ / _); rewrite -sum1_card natr_sum [in RHS]big_mkcond /=.
+by apply: eq_bigr => a _; rewrite inE; case: (P a).
+Qed.
 
 (** Lean: [card_cast_pos] ([Nonempty α] becomes [0 < #|T|]). *)
 Lemma card_gt0R T : (0 < #|T|)%N -> (0 : R) < #|T|%:R.
-Proof. Admitted.
+Proof. by rewrite ltr0n. Qed.
 
 (** Lean: [avg_const]. *)
 Lemma avg_const T (c : R) : (0 < #|T|)%N -> avg (fun _ : T => c) = c.
-Proof. Admitted.
+Proof.
+by move=> T0; rewrite /avg sumr_const -[in X in X / _]mulr_natr mulfK // pnatr_eq0 -lt0n.
+Qed.
 
 (** ** Expectation over [k] i.i.d. uniform draws
 
@@ -81,37 +91,52 @@ Fixpoint expList {T} (k : nat) (F : seq T -> R) : R :=
 
 (** Lean: [expList_zero]. *)
 Lemma expList0 T (F : seq T -> R) : expList 0 F = F [::].
-Proof. Admitted.
+Proof. by []. Qed.
 
 (** Lean: [expList_succ]. *)
 Lemma expListS T k (F : seq T -> R) :
   expList k.+1 F = avg (fun a : T => expList k (fun s => F (a :: s))).
-Proof. Admitted.
+Proof. by []. Qed.
 
 (** Lean: [expList_nonneg]. *)
 Lemma expList_ge0 T k (F : seq T -> R) :
   (forall s, 0 <= F s) -> 0 <= expList k F.
-Proof. Admitted.
+Proof.
+elim: k F => [|k IH] F F0 /=; first exact: F0.
+by apply: avg_ge0 => a; apply: IH.
+Qed.
 
 (** Lean: [expList_le_expList]. *)
 Lemma expList_le T k (F G : seq T -> R) :
   (forall s, F s <= G s) -> expList k F <= expList k G.
-Proof. Admitted.
+Proof.
+elim: k F G => [|k IH] F G FG /=; first exact: FG.
+by apply: avg_le => a; apply: IH.
+Qed.
 
 (** Lean: [expList_add]. *)
 Lemma expListD T k (F G : seq T -> R) :
   expList k (fun s => F s + G s) = expList k F + expList k G.
-Proof. Admitted.
+Proof.
+elim: k F G => [|k IH] F G //=.
+by rewrite -avgD; congr avg; apply/funext => a /=; rewrite IH.
+Qed.
 
 (** Lean: [expList_const_mul]. *)
 Lemma expListZ T k (c : R) (F : seq T -> R) :
   expList k (fun s => c * F s) = c * expList k F.
-Proof. Admitted.
+Proof.
+elim: k F => [|k IH] F //=.
+by rewrite -avgZ; congr avg; apply/funext => a /=; rewrite IH.
+Qed.
 
 (** Lean: [expList_const]. *)
 Lemma expList_const T k (c : R) :
   (0 < #|T|)%N -> expList k (fun _ : seq T => c) = c.
-Proof. Admitted.
+Proof.
+move=> T0; elim: k => [|k IH] //=.
+by rewrite -[in RHS](avg_const c T0); congr avg; apply/funext => a.
+Qed.
 
 (** Lean: [expList_append] — the expectation over [k1 + k2] rounds is the
     iterated expectation; this is the conditioning idiom used to glue the
@@ -119,7 +144,10 @@ Proof. Admitted.
 Lemma expList_cat T k1 k2 (F : seq T -> R) :
   expList (k1 + k2) F
     = expList k1 (fun s1 => expList k2 (fun s2 => F (s1 ++ s2))).
-Proof. Admitted.
+Proof.
+elim: k1 F => [|k1 IH] F //=.
+by congr avg; apply/funext => a /=; rewrite IH.
+Qed.
 
 End Avg.
 
