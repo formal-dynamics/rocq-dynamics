@@ -53,7 +53,7 @@ every checkpoint commit that changes it. Decisions referenced as D1… are in
 | `theories/rumor/saturation.v` | 1/1 | 1 | skeletons compile |
 | `theories/rumor/main.v` | 7/7 | 6 | skeletons compile; `ceiln` = Lean `Nat.ceil` (move to prelude later) |
 | `theories/majority/model.v` | 13/13 | 10 | skeletons compile 2026-09-12 |
-| `theories/majority/oneround.v` | 18/18 | 15 | skeletons compile |
+| `theories/majority/oneround.v` | 18/18 | 0 | proved 2026-09-12 (agent) |
 | `theories/majority/growth.v` | 10/10 | 9 | skeletons compile |
 | `theories/majority/saturation.v` | 17/17 | 14 | skeletons compile; `T2a n R` takes `R` explicitly |
 | `theories/majority/main.v` | 7/7 | 7 | skeletons compile |

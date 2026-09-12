@@ -133,3 +133,8 @@ papers in `reference/leanamycs/*/latex/` remain the informal proofs.
   `log_inv` ↔ `lnV ?posrE`, `log_div` ↔ `ln_div ?posrE`, `log_exp` ↔ `expRK`,
   `exp_neg` ↔ `expRN`, `log_le_log` ↔ `ler_ln ?posrE`, `exp_nat_mul` ↔ `expRM_natl`,
   `exp_one_gt_d9` ↔ `expR_ge_series 6` (gives `163/60 <= expR 1`); `ln 0 = 0` is `ln0`.
+- `#|[pred a | a \in I]|` and `#|I|` are convertible (no `cardsE` needed); `(1 <= n)%N` is
+  convertible to `(0 < n)%N` for `exact:` but not for `rewrite` (keys `leq` vs `ltn`).
+- Nested product cardinalities need `!card_prod !card_ord !muln_gt0`; a single `card_prod`
+  leaves an inner `#|'I_n * 'I_n|` and `done` fails with "No applicable tactic".
+- `rewrite (avg_mul_prod g h)` with `g`, `h` given matches the goal's lambda up to beta.
