@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### M1/M2 — probability layer (2026-09-12, branch prob-layer)
+- `theories/prob/{avg,indep,bounds,chernoff}.v`: every declaration of the Lean `Prob`,
+  `Bounds` and `Chernoff` files as statements; `avg`, `indep`, `chernoff` fully proved
+  (`bounds` in progress). `bigA_distr_bigA` replaces Lean's hand-rolled independence.
+
+### M3/M5 — process statements (2026-09-12, branch prob-layer)
+- `theories/rumor/*.v` and `theories/majority/*.v`: all definitions and theorem
+  statements of both Lean projects as `Admitted` skeletons, same constants as Lean.
+  `Tgt n` is a dependent finfun; `Tgt3 n` a finfun into right-nested triples.
+
 ### M0 — toolchain and skeleton (2026-09-10)
 - Studied the LLM4Rocq tooling and project conventions (`docs/study/`).
 - Chose the LLM4Rocq toolchain snapshot: Rocq 9.1.1, MathComp 2.5.0, mathcomp-analysis
