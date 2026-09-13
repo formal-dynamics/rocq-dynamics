@@ -20,7 +20,7 @@ holds a complete, `Admitted`-free Rocq/MathComp port of the Lean monorepo
 - `make gate` = layering check + build + no-`Admitted` check + `verify.sh` (clean rebuild and
   `Print Assumptions` of the four headline theorems, allow-list = the three `boolp` axioms:
   functional extensionality, propositional extensionality, constructive indefinite
-  description). It is green on `main` at commit `04875e5`.
+  description). It is green on `main` at commit `12c5b22` (16 files incl. `prob/equivalence.v`).
 - CI: `.github/workflows/build.yml` runs the same gate in the
   `mathcomp/mathcomp:2.5.0-rocq-prover-9.1` image (installs mathcomp-analysis 1.16.0 on top,
   ~20–25 min). The first run (`gh run list`) was still in progress at handoff time: **check
@@ -56,14 +56,14 @@ each agent compiling ONLY its file with
 agents is safe; 6 hit the rate limit. Real-arithmetic side goals: `lra`/`nra` with the
 transcendental facts supplied as hypotheses (`expR_ge1Dx`, `ln_ge_quadratic`, ...).
 
-## 4. In flight at handoff (uncommitted, in the working tree)
+## 4. M7/M8 deliverables (all committed in 12c5b22; completion status in §6)
 
 Milestone **M7 (blueprint + docs site)**:
 
 - `blueprint/src/{web,print}.tex`, `plastex.cfg`, `latexmkrc`, `extra_styles.css`,
   `macros/{common,print,web}.tex` — done (from the rocqblueprint templates; `common.tex`
   defines `\N \R \E \Pr \card \avg \expList \rocqfile` and the theorem environments).
-- `blueprint/src/content.tex` — being written by an agent: a single Rocq blueprint in three
+- `blueprint/src/content.tex` — written (complete, see §6): a single Rocq blueprint in three
   chapters (finite probability; rumor spreading; 3-majority), translating the two Lean
   `blueprint/src/content.tex` files with `\rocq{Dynamics.<module>.<name>}` tags (Lean
   names → Rocq names via the `(** Lean: [...] *)` docstrings in `theories/`), `\rocqok`,
@@ -83,7 +83,7 @@ Milestone **M7 (blueprint + docs site)**:
 
 Milestone **M8 (faithfulness audit)**:
 
-- `docs/LEAN_TO_ROCQ.md` — being written by an agent: one row per Lean declaration (Lean
+- `docs/LEAN_TO_ROCQ.md` — written (complete, see §6): one row per Lean declaration (Lean
   name → Rocq name, statement differences, constants), helper lemmas without Lean
   counterpart, proof-level deviations, verdict. Status in §6.
 - `theories/prob/equivalence.v` — port of Lean `Equivalence.lean`
@@ -94,12 +94,14 @@ Milestone **M8 (faithfulness audit)**:
 
 ## 5. Immediate to-do list for the next agent
 
-1. `eval $(opam env --switch=rocq-9.1.1 --set-switch); make -j && make gate` — must stay
-   green. If `equivalence.v` breaks it, see §4.
-2. Finish/verify `blueprint/src/content.tex` (web + pdf build, `check_rocq_decls.py`).
-3. Finish `docs/LEAN_TO_ROCQ.md` (mark unfinished rows `TODO`), then mark M7/M8 in
-   `docs/PLAN.md` and add a CHANGELOG entry.
-4. Commit on `main` (guardrail: the `rocq` plugin hook blocks `git push` in Rocq
+1. Check the two GitHub workflows on `main` (`gh run list`, `gh run view <id> --log-failed`):
+   `build.yml` (first run was still installing mathcomp-analysis at handoff) and
+   `blueprint.yml` (never ran before 12c5b22). Fix container/CI issues only; the proofs and
+   the blueprint build are verified locally (`make gate`, `rocqblueprint web/pdf`,
+   `check_rocq_decls.py` all green).
+2. Keep `make gate` green on every change.
+3. (done) M7/M8 bookkeeping is in `docs/PLAN.md` and `CHANGELOG.md`.
+4. When committing on `main` (guardrail: the `rocq` plugin hook blocks `git push` in Rocq
    directories; use `ROCQ_GUARDRAILS_BYPASS=1 git push` from Claude Code; irrelevant for
    Codex), push, watch both workflows with `gh run list` / `gh run view <id> --log-failed`.
 5. Decide on repo visibility for Pages.
