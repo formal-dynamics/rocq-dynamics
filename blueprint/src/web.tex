@@ -1,0 +1,22 @@
+% Web (HTML) version of the blueprint; see print.tex for the pdf version.
+\documentclass{report}
+
+\usepackage{amssymb, amsthm, amsmath}
+\usepackage{hyperref}
+\usepackage[showmore, dep_graph]{blueprint}
+
+\input{macros/common}
+\input{macros/web}
+
+% Relative: the blueprint is served at <site>/blueprint/ next to <site>/docs/.
+\home{..}
+\github{https://github.com/formal-dynamics/rocq-dynamics}
+\dochome{../docs}
+
+\title{Opinion dynamics on the complete graph, in Rocq}
+\author{Emanuele Natale, Marc Lelarge}
+
+\begin{document}
+\maketitle
+\input{content}
+\end{document}

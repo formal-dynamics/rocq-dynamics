@@ -1,0 +1,169 @@
+name: Blueprint and docs
+
+# Non-gating documentation workflow (build.yml is the gate): builds the
+# rocqblueprint site (web + pdf), the coqdoc API documentation, checks that
+# every declaration cited by the blueprint exists, assembles everything under
+# the Jekyll home page and uploads the result as the `site` artifact.
+#
+# Deployment to GitHub Pages runs only on pushes to main and is best-effort:
+# Pages is not available for this repository while it is private, so the
+# deploy job is allowed to fail; the `site` artifact is always produced.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-${{ github.event_name == 'pull_request' && github.head_ref || 'deploy' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  blueprint:
+    name: Build the blueprint (web + pdf)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build the blueprint
+        uses: xu-cheng/texlive-action@v2
+        with:
+          docker_image: ghcr.io/xu-cheng/texlive-full:20250401
+          run: |
+            set -eu
+            apk update
+            apk add --update make py3-pip git pkgconfig graphviz graphviz-dev gcc musl-dev
+            git config --global --add safe.directory "$GITHUB_WORKSPACE"
+            python3 -m venv env
+            . env/bin/activate
+            pip install --upgrade pip requests wheel
+            pip install pygraphviz \
+              --config-settings="--global-option=build_ext" \
+              --config-settings="--global-option=-L/usr/lib/graphviz/" \
+              --config-settings="--global-option=-R/usr/lib/graphviz/"
+            pip install rocqblueprint
+            rocqblueprint pdf
+            rocqblueprint web
+            mkdir -p site
+            cp blueprint/print/print.pdf site/blueprint.pdf
+            cp -r blueprint/web site/blueprint
+      - name: Take ownership of container-created files
+        run: sudo chown -R "$(id -u):$(id -g)" blueprint site
+      - uses: actions/upload-artifact@v4
+        with:
+          name: blueprint-site
+          path: site
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rocq-decls
+          path: blueprint/rocq_decls
+          if-no-files-found: error
+
+  docs:
+    name: Build coqdoc and check the cited declarations
+    needs: blueprint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: rocq-decls
+          path: blueprint
+      - uses: coq-community/docker-coq-action@v1
+        with:
+          custom_image: 'mathcomp/mathcomp:2.5.0-rocq-prover-9.1'
+          install: |
+            startGroup "Install dependencies"
+              opam repo add rocq-released https://rocq-prover.org/opam/released || true
+              opam update -y
+              opam install -y \
+                rocq-mathcomp-classical.1.16.0 rocq-mathcomp-reals.1.16.0 \
+                rocq-mathcomp-analysis.1.16.0 \
+                coq-mathcomp-algebra-tactics.1.2.7 coq-mathcomp-zify
+            endGroup
+          before_script: |
+            startGroup "Workaround permission issue"
+              sudo chown -R "$(id -u):$(id -g)" .
+            endGroup
+          script: |
+            startGroup "Build"
+              make -j2
+            endGroup
+            startGroup "Check the declarations cited by the blueprint"
+              python3 scripts/check_rocq_decls.py blueprint/rocq_decls
+            endGroup
+            startGroup "coqdoc"
+              make -f CoqMakefile html
+            endGroup
+          after_script: |
+            sudo chown -R 1001:116 . || true
+      - name: Collect coqdoc
+        run: |
+          sudo chown -R "$(id -u):$(id -g)" html
+          mkdir -p site && mv html site/docs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coqdoc-site
+          path: site
+          if-no-files-found: error
+
+  assemble:
+    name: Assemble the site
+    needs: [blueprint, docs]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: blueprint-site
+          path: home_page
+      - uses: actions/download-artifact@v4
+        with:
+          name: coqdoc-site
+          path: home_page
+      - uses: ruby/setup-ruby@v1
+        with:
+          working-directory: home_page
+          ruby-version: "3.4"
+          bundler-cache: true
+      - name: Build the website using Jekyll
+        working-directory: home_page
+        env:
+          JEKYLL_GITHUB_TOKEN: ${{ github.token }}
+        run: JEKYLL_ENV=production bundle exec jekyll build
+      - name: Check every piece made it into the site
+        working-directory: home_page
+        run: |
+          test -f _site/index.html
+          test -f _site/blueprint/index.html
+          test -f _site/blueprint.pdf
+          test -f _site/docs/toc.html
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: home_page/_site
+          if-no-files-found: error
+      - uses: actions/upload-pages-artifact@v3
+        if: github.event_name == 'push'
+        with:
+          path: home_page/_site
+
+  deploy:
+    name: Deploy to GitHub Pages (best effort)
+    if: github.event_name == 'push'
+    needs: assemble
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -87,6 +87,8 @@ papers in `reference/leanamycs/*/latex/` remain the informal proofs.
 - Whether to keep Lean's `expList` or state everything over the product space
   `{ffun 'I_T -> Tgt n}` directly (Lean proves both agree in `Equivalence.lean`).
   Start with `expList` (conditioning is definitional), port `Equivalence` last.
+  Done 2026-09-13: `theories/prob/equivalence.v` (`expList_eq_avg_tuple`, product space
+  `k.-tuple T`); audit in `docs/LEAN_TO_ROCQ.md`.
 - `Num.ceil` returns `int`; `ceiln x := `|Num.ceil x|` (in the prelude) is Lean's `Nat.ceil` for
   `x >= 0`; brackets `ceiln_ge`/`ceiln_lt` live in `rumor/main.v`.
 - Done 2026-09-12: `classical_sets` is no longer exported by the prelude (it shadowed finset's

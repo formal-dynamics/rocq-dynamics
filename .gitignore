@@ -42,3 +42,13 @@ site/
 .vscode/
 *~
 .DS_Store
+blueprint/src/web/
+blueprint/src/print/
+blueprint/web/
+blueprint/print/
+blueprint/rocq_decls
+blueprint/src/rocq_decls
+home_page/_site/
+home_page/blueprint/
+home_page/blueprint.pdf
+home_page/docs/

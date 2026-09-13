@@ -1,0 +1,21 @@
+\contentsline {paragraph}{Notation.}{2}{section*.3}%
+\contentsline {chapter}{\numberline {1}Finite uniform probability}{3}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Averages and trajectory expectations}{3}{section.1.1}%
+\contentsline {section}{\numberline {1.2}Independence over a product space}{4}{section.1.2}%
+\contentsline {section}{\numberline {1.3}Elementary inequalities}{5}{section.1.3}%
+\contentsline {section}{\numberline {1.4}An elementary Chernoff bound}{7}{section.1.4}%
+\contentsline {chapter}{\numberline {2}Rumor spreading (uniform push)}{9}{chapter.2}%
+\contentsline {section}{\numberline {2.1}The model}{9}{section.2.1}%
+\contentsline {section}{\numberline {2.2}Main theorem}{10}{section.2.2}%
+\contentsline {section}{\numberline {2.3}One-round estimates}{11}{section.2.3}%
+\contentsline {section}{\numberline {2.4}Adaptive Bernoulli trials}{12}{section.2.4}%
+\contentsline {section}{\numberline {2.5}Growth phase}{12}{section.2.5}%
+\contentsline {section}{\numberline {2.6}Saturation phase}{13}{section.2.6}%
+\contentsline {section}{\numberline {2.7}Proof of the main theorem}{14}{section.2.7}%
+\contentsline {chapter}{\numberline {3}3-majority dynamics}{15}{chapter.3}%
+\contentsline {section}{\numberline {3.1}The model}{15}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Main theorem}{16}{section.3.2}%
+\contentsline {section}{\numberline {3.3}The majority map}{17}{section.3.3}%
+\contentsline {section}{\numberline {3.4}Growth phase}{18}{section.3.4}%
+\contentsline {section}{\numberline {3.5}Saturation phase}{18}{section.3.5}%
+\contentsline {section}{\numberline {3.6}Proof of the main theorem}{20}{section.3.6}%

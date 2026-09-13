@@ -1,0 +1,1848 @@
+% Blueprint of the rocq-dynamics development: a Rocq/MathComp port of the two
+% Lean 4 + Mathlib formalizations of the formal-dynamics/leanamycs monorepo
+% (rumor_spread/ and 3-majority/). The text follows the two Lean blueprints
+% lemma-for-lemma, but every statement carries \rocq{...} / \rocqok / \uses{...}
+% tags matched to the *actual* Rocq declarations in theories/**/*.v, so that
+% rocqblueprint can build the dependency graph and check coverage. Where the
+% Rocq proof takes a different route than the Lean proof, a short remark says
+% so (see also CHANGELOG.md). Labels are prefixed pr: (shared probability
+% layer), rs: (rumor spreading) and mj: (3-majority).
+
+\chapter*{Overview}
+
+This document is the blueprint of \texttt{rocq-dynamics}, a complete
+(\texttt{Admitted}-free) Rocq/MathComp port of two elementary, fully
+formalized analyses of opinion dynamics on the complete graph $K_n$:
+
+\begin{itemize}
+\item \textbf{Rumor spreading (uniform push).} Started from a single informed
+  node, the push protocol informs all $n$ nodes within $O(\log n)$ rounds with
+  probability at least $1 - 2/n$ (Theorem~\ref{rs:main},
+  \texttt{Dynamics.rumor.main.push\_informs\_all\_whp}).
+\item \textbf{3-majority dynamics.} Started from a $60\%$ majority, the
+  3-majority process reaches consensus within $O(\log n)$ rounds with
+  probability at least $1 - 500/n$ (Theorem~\ref{mj:main},
+  \texttt{Dynamics.majority.main.majority3\_consensus\_whp}).
+\end{itemize}
+
+The probability space is finite and uniform throughout. Instead of measure
+theory, probabilities and expectations are finite sums divided by
+cardinalities (Chapter~\ref{pr:chapter}); the only analytic ingredients are
+Bernoulli's inequality, Markov's inequality and, for 3-majority, a
+from-scratch Chernoff bound derived from $1 + x \le e^x$. The two Lean
+projects each carry their own copy of the finite-probability layer; the Rocq
+development shares a single layer \texttt{theories/prob/} between the two
+processes, which are otherwise independent leaves of the dependency graph
+(\texttt{theories/rumor/} and \texttt{theories/majority/} never import each
+other).
+
+Every statement below is tagged with the fully qualified Rocq name(s) that
+formalize it (\texttt{Dynamics.\textit{dir}.\textit{file}.\textit{name}}) and
+the constants are exactly those of the Lean statements. The main theorems
+depend only on the three classical axioms of \texttt{mathcomp-analysis}
+(\texttt{boolp.functional\_extensionality\_dep},
+\texttt{boolp.propositional\_extensionality},
+\texttt{boolp.constructive\_indefinite\_description}).
+
+\paragraph{Notation.} Throughout, $\log$ denotes the natural logarithm
+(MathComp's \texttt{ln}), $\exp$ is \texttt{expR}, and $[\,P\,]$ denotes the
+real-valued indicator of a boolean $P$ (written \texttt{P\%:R} in Rocq: the
+coercion of a boolean to $\{0,1\} \subseteq \mathbb{R}$). For $x \ge 0$,
+$\lceil x \rceil$ denotes the natural-number ceiling
+\texttt{ceiln x = `|Num.ceil x|}. Cardinalities $|I|$ of finite sets are
+\texttt{\#|I|}, coerced to $\mathbb{R}$ as \texttt{\#|I|\%:R}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Finite uniform probability}\label{pr:chapter}
+
+All randomness in this development is uniform over finite types, so instead
+of measure theory or \texttt{PMF} we work with plain finite sums. This
+chapter collects the shared layer \texttt{theories/prob/}: averages and
+trajectory expectations (\texttt{avg.v}), independence over a product space
+(\texttt{indep.v}), the elementary real inequalities used by both processes
+(\texttt{bounds.v}), and the Chernoff bound used by 3-majority
+(\texttt{chernoff.v}).
+
+\section{Averages and trajectory expectations}\label{pr:sec:avg}
+
+\begin{definition}[Average]\label{pr:avg}
+  \rocq{Dynamics.prob.avg.avg}
+  \rocqok
+  For a finite type $\alpha$ (a MathComp \texttt{finType} $T$) and
+  $f \colon \alpha \to \mathbb{R}$,
+  $\mathrm{avg}(f) := \bigl(\sum_{a} f(a)\bigr) / |\alpha|$ is the
+  expectation of $f$ under the uniform distribution on $\alpha$.
+  In Rocq, $\mathrm{avg}\ f = (\sum_{a : T} f\ a) / \#|T|$ over an arbitrary
+  \texttt{realType} $R$; when $T$ is empty both sides are $0$ (MathComp's
+  $x / 0 = 0$ convention), exactly as in Lean, and nonemptiness is the
+  hypothesis $0 < \#|T|$.
+\end{definition}
+
+\begin{definition}[Trajectory expectation]\label{pr:expList}
+  \rocq{Dynamics.prob.avg.expList}
+  \rocqok
+  \uses{pr:avg}
+  For a finite type $\alpha$, $\mathrm{expList}\ k\ F$ is the
+  expectation of a functional $F$ of a trajectory of $k$ i.i.d.\ uniform
+  draws from $\alpha$, defined \emph{by recursion on $k$}: the head draw is
+  averaged out first, i.e.\ $\mathrm{expList}\ 0\ F = F(\,[]\,)$ and
+  $\mathrm{expList}\ (k{+}1)\ F
+    = \mathrm{avg}\bigl(a \mapsto \mathrm{expList}\ k\ (s \mapsto
+    F(a :: s))\bigr)$.
+  This makes ``conditioning on the first round'' a definitional unfolding
+  rather than a measure-theoretic construction. In Rocq this is a
+  \texttt{Fixpoint} on $k$ with $F \colon \texttt{seq}\ T \to R$.
+\end{definition}
+
+\begin{lemma}[Basic properties of the average]\label{pr:avg-basic}
+  \rocq{Dynamics.prob.avg.avg_ge0, Dynamics.prob.avg.avg_le,
+    Dynamics.prob.avg.avgD, Dynamics.prob.avg.avgB, Dynamics.prob.avg.avgZ,
+    Dynamics.prob.avg.avg_sum, Dynamics.prob.avg.avg_ind,
+    Dynamics.prob.avg.card_gt0R, Dynamics.prob.avg.avg_const}
+  \rocqok
+  \uses{pr:avg}
+  $\mathrm{avg}$ is nonnegative on nonnegative functions
+  (\texttt{avg\_ge0}), monotone (\texttt{avg\_le}), additive
+  (\texttt{avgD}, \texttt{avgB}), homogeneous (\texttt{avgZ}), commutes with
+  finite sums (\texttt{avg\_sum}), and constants pass through unchanged on a
+  nonempty type (\texttt{avg\_const}, with \texttt{card\_gt0R} turning
+  $0 < \#|T|$ into $0 < \#|T|$ in $\mathbb{R}$). The expectation of an
+  indicator is a counting ratio:
+  $\mathrm{avg}\bigl(a \mapsto [P\,a]\bigr) = |\{a : P\,a\}| / |\alpha|$
+  (\texttt{avg\_ind}). These pointwise inequalities pushed through
+  \texttt{avg\_le} are the only form in which Markov's inequality and union
+  bounds are used below (Lemmas~\ref{pr:markov} and~\ref{pr:revmarkov}).
+\end{lemma}
+\begin{proof}
+  \rocqok
+  Unfold $\mathrm{avg}$ and use the bigop library: \texttt{sumr\_ge0},
+  \texttt{ler\_sum}, \texttt{big\_split}, \texttt{sumrB},
+  \texttt{mulr\_sumr}, \texttt{exchange\_big}, \texttt{sumr\_const}; for the
+  indicator, \texttt{big\_mkcond} and \texttt{sum1\_card}.
+\end{proof}
+
+\begin{lemma}[Basic properties of the trajectory expectation]
+  \label{pr:expList-basic}
+  \rocq{Dynamics.prob.avg.expList0, Dynamics.prob.avg.expListS,
+    Dynamics.prob.avg.expList_ge0, Dynamics.prob.avg.expList_le,
+    Dynamics.prob.avg.expListD, Dynamics.prob.avg.expListZ,
+    Dynamics.prob.avg.expList_const, Dynamics.prob.avg.expList_cat}
+  \rocqok
+  \uses{pr:expList, pr:avg-basic}
+  The two defining equations (\texttt{expList0}, \texttt{expListS});
+  $\mathrm{expList}$ is nonnegative on nonnegative functionals, monotone,
+  additive and homogeneous, and constants pass through unchanged on a
+  nonempty type. Moreover $\mathrm{expList}$ over a concatenated horizon
+  splits as a nested $\mathrm{expList}$:
+  \[
+    \mathrm{expList}\ (k_1 + k_2)\ F \;=\;
+    \mathrm{expList}\ k_1\ \bigl(s_1 \mapsto
+      \mathrm{expList}\ k_2\ (s_2 \mapsto F(s_1 \mathbin{+\!\!+} s_2))\bigr)
+  \]
+  (\texttt{expList\_cat}, Lean's \texttt{expList\_append}), used to glue the
+  phases of both processes.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  Induction on $k$ (resp.\ $k_1$), pushing each property through
+  Lemma~\ref{pr:avg-basic} at every step; the induction steps only need
+  functional extensionality to rewrite under $\mathrm{avg}$.
+\end{proof}
+
+\begin{lemma}[Markov's inequality, finite uniform version]\label{pr:markov}
+  \rocq{Dynamics.prob.avg.avg_le}
+  \rocqok
+  \uses{pr:avg, pr:avg-basic}
+  Let $\Omega$ be a finite nonempty set with the uniform measure,
+  $f \colon \Omega \to \mathbb{R}$ with $f \ge 0$, and $a > 0$. Then
+  $\mathbb{P}[f \ge a] \le \mathbb{E}[f]/a$. In particular, if $f$ takes
+  values in $\mathbb{N}$, then $\mathbb{P}[f \ne 0] \le \mathbb{E}[f]$.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  Pointwise $[f \ge a] \le f/a$, pushed through \texttt{avg\_le}. This is not
+  isolated as a named lemma: each use site supplies its own pointwise bound.
+\end{proof}
+
+\begin{lemma}[Reverse Markov for bounded variables]\label{pr:revmarkov}
+  \rocq{Dynamics.prob.avg.avg_le}
+  \rocqok
+  \uses{pr:avg, pr:avg-basic}
+  Let $f \colon \Omega \to \mathbb{R}$ with $0 \le f \le b$ pointwise, $b > 0$,
+  and let $0 < a < b$. Then $\mathbb{P}[f \ge a] \ge
+  \dfrac{\mathbb{E}[f] - a}{b}$.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  Pointwise $f \le a + b\,[f \ge a]$, pushed through \texttt{avg\_le}. As
+  with Lemma~\ref{pr:markov}, the formalization does not isolate this as a
+  named lemma: each use site (e.g.\ Lemma~\ref{rs:goodround}) supplies its
+  own pointwise bound.
+\end{proof}
+
+\begin{theorem}[Faithfulness of the model]\label{pr:faithful}
+  \rocq{Dynamics.prob.equivalence.avg_pair,
+    Dynamics.prob.equivalence.cons_tuple_bij,
+    Dynamics.prob.equivalence.expList_eq_avg_tuple}
+  \rocqok
+  \uses{pr:expList, pr:avg-basic, pr:indep}
+  $\mathrm{expList}\ k\ F$ equals the uniform average of $F$ over
+  \emph{all} length-$k$ sequences of draws, i.e.\ over the product
+  probability space of $k$ i.i.d.\ uniform rounds:
+  \[
+    \mathrm{expList}\ k\ F \;=\; \mathrm{avg}\bigl(w \mapsto F(w)\bigr)
+    \qquad \text{over } w \in \texttt{k.-tuple}\ T
+  \]
+  (\texttt{expList\_eq\_avg\_tuple}). This confirms that the recursive
+  definition of Definition~\ref{pr:expList} is the textbook object. Lean
+  states the product space as $\mathrm{Fin}\ T \to \alpha$ and reads a draw
+  sequence off with \texttt{List.ofFn}; the MathComp counterpart is the
+  finite type \texttt{k.-tuple T} of length-$k$ sequences, coerced to
+  \texttt{seq T}.
+\end{theorem}
+\begin{proof}
+  \rocqok
+  Induction on $k$. For $k = 0$ the only tuple is empty. For $k + 1$, unfold
+  $\mathrm{expList}$ one draw, apply the induction hypothesis under
+  $\mathrm{avg}$, then use Fubini for $\mathrm{avg}$ over a binary product
+  (\texttt{avg\_pair}, both sides being $0$ if either factor is empty) and
+  reindex along the bijection $(a, w) \mapsto a :: w$ from
+  $T \times \texttt{k.-tuple}\ T$ to $\texttt{k+1.-tuple}\ T$
+  (\texttt{cons\_tuple\_bij}, Lean's \texttt{Fin.consEquiv}) with
+  \texttt{avg\_bij} of Lemma~\ref{pr:indep}.
+\end{proof}
+
+\noindent\textbf{Remark (Rocq).} This is Lean's
+\texttt{RumorPush.expList\_eq\_avg\_ofFn} (\texttt{Equivalence.lean},
+\texttt{rumor\_spread} only); in Rocq it lives in the shared layer
+(\texttt{theories/prob/equivalence.v}) so that it covers both processes. It
+is a sanity check that no other statement depends on.
+
+\section{Independence over a product space}\label{pr:sec:indep}
+
+\begin{lemma}[Independence over a product space]\label{pr:indep}
+  \rocq{Dynamics.prob.indep.avg_mul_prod, Dynamics.prob.indep.avg_fst,
+    Dynamics.prob.indep.avg_snd, Dynamics.prob.indep.avg_bij,
+    Dynamics.prob.indep.avg_prod_ffun, Dynamics.prob.indep.avg_eval}
+  \rocqok
+  \uses{pr:avg, pr:avg-basic}
+  Only needed by the 3-majority process, which averages over the $n$ agents'
+  independent samples in a single round. For finite types $\beta,\delta$ and
+  $g \colon \beta\to\mathbb{R}$, $h\colon\delta\to\mathbb{R}$:
+  $\mathrm{avg}(p \mapsto g(p_1)h(p_2)) = \mathrm{avg}(g)\,\mathrm{avg}(h)$
+  over the product $\beta\times\delta$ (\texttt{avg\_mul\_prod}, with no
+  nonemptiness hypothesis: if either factor is empty both sides are $0$),
+  with marginal consequences \texttt{avg\_fst} / \texttt{avg\_snd} (Lean's
+  \texttt{avg\_fst\_mul} / \texttt{avg\_snd\_mul}), and reindexing along a
+  bijection (\texttt{avg\_bij}, Lean's \texttt{avg\_equiv}). Iterating over an
+  $'I_n$-indexed product (\texttt{avg\_prod\_ffun}, Lean's
+  \texttt{avg\_prod\_pi}): for $f \colon 'I_n \to \gamma \to \mathbb{R}$,
+  \[
+    \mathrm{avg}\Bigl(x \mapsto \textstyle\prod_{i < n} f_i(x_i)\Bigr)
+      \;=\; \prod_{i < n} \mathrm{avg}(f_i)
+  \]
+  over $x \colon \{\texttt{ffun}\ 'I_n \to \gamma\}$ --- the discrete,
+  measure-theory-free form of ``coordinate projections on a product space
+  are independent'' --- with a one-coordinate marginal corollary
+  (\texttt{avg\_eval}). This is exactly the independence fact that lets the
+  $n$ agents' per-round updates be combined into a single concentration
+  bound (Section~\ref{pr:sec:chernoff}).
+\end{lemma}
+\begin{proof}
+  \rocqok
+  \texttt{avg\_mul\_prod} is \texttt{card\_prod} plus
+  \texttt{big\_distrlr}/\texttt{pair\_bigA}; the marginals follow by
+  multiplying with the constant $1$ and \texttt{avg\_const};
+  \texttt{avg\_bij} is \texttt{reindex} plus \texttt{bij\_eq\_card}.
+  \texttt{avg\_eval} instantiates \texttt{avg\_prod\_ffun} with
+  $f_i = F$ at $i = v$ and $f_i = 1$ elsewhere.
+\end{proof}
+
+\noindent\textbf{Remark (Rocq).} Lean proves \texttt{avg\_prod\_pi} by a
+hand-rolled induction on $n$ through an explicit equivalence
+$\mathrm{Fin}\ (n{+}1) \to \gamma \simeq \gamma \times (\mathrm{Fin}\ n \to
+\gamma)$. In Rocq the whole lemma is MathComp's \texttt{bigA\_distr\_bigA}
+(a sum over finite functions of a product is a product of sums) plus
+\texttt{card\_ffun}, \texttt{natrX}, \texttt{prodr\_const} and
+\texttt{exprVn}.
+
+\section{Elementary inequalities}\label{pr:sec:ineq}
+
+None of these needs calculus, except the Pad\'e bound of
+Section~\ref{mj:sec:saturation} which uses the mean value theorem.
+Lemmas~\ref{pr:bernoulli}--\ref{pr:logbounds} come from the rumor-spreading
+project (there $x = \tfrac{1}{n-1}$, so $0 < x \le 1$ for $n \ge 2$);
+Lemmas~\ref{pr:expseries}--\ref{pr:lnge30} from the 3-majority project.
+
+\begin{lemma}[Bernoulli]\label{pr:bernoulli}
+  \rocq{Dynamics.prob.bounds.one_sub_mul_le_pow}
+  \rocqok
+  For all real $x \le 2$ (i.e.\ $1 - x \ge -1$) and $m \in \mathbb{N}$:
+  $1 - mx \le (1-x)^m$. Equivalently, with $y = -x \ge -1$:
+  $(1+y)^m \ge 1 + my$.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  For $x \le 1$, induction on $m$ (each step is an \texttt{nra} goal). For
+  $1 < x \le 2$, the cases $m \le 1$ are trivial and for $m \ge 2$ one uses
+  $|1 - x| \le 1$, hence $|(1-x)^m| \le 1$ (\texttt{normrX},
+  \texttt{exprn\_ile1}), together with $1 - mx \le 1 - 2x < -1$. MathComp
+  has no Bernoulli inequality, so this is proved from scratch.
+\end{proof}
+
+\begin{lemma}[Second-order lower bound, ``Bonferroni'']\label{pr:bonferroni}
+  \rocq{Dynamics.prob.bounds.mul_sub_sq_le_one_sub_pow,
+    Dynamics.prob.bounds.half_mul_le_one_sub_pow}
+  \rocqok
+  \uses{pr:bernoulli}
+  For $0 \le x \le 1$ and $m \in \mathbb{N}$:
+  \[
+    1-(1-x)^m \;\ge\; mx - \frac{m^2x^2}{2} \;=\; mx\Bigl(1-\frac{mx}{2}\Bigr),
+  \]
+  and consequently $mx/2 \le 1-(1-x)^m$ whenever $mx \le 1$.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  Induction on $m$: $(1-x)^{m+1} = (1-x)(1-x)^m$ and Bernoulli
+  ($1 - mx \le (1-x)^m$, Lemma~\ref{pr:bernoulli}) multiplied by $x \ge 0$
+  give the step. The second statement is the first with $mx \le 1$.
+\end{proof}
+
+\begin{lemma}[Upper bound without $e$]\label{pr:upper}
+  \rocq{Dynamics.prob.bounds.pow_one_sub_le_one_div}
+  \rocqok
+  \uses{pr:bernoulli}
+  For $0 \le x \le 1$ and $m \in \mathbb{N}$: $(1-x)^m \le \dfrac{1}{1+mx}$.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  Bernoulli at $-x$ gives $1 + mx \le (1+x)^m$, so
+  $(1-x)^m (1 + mx) \le \bigl((1-x)(1+x)\bigr)^m = (1-x^2)^m \le 1$.
+\end{proof}
+
+\begin{lemma}[Logarithm bound]\label{pr:logbounds}
+  \rocq{Dynamics.prob.bounds.one_sub_inv_le_ln}
+  \rocqok
+  For $x > 0$: $1 - \tfrac1x \le \log x$. (The rumor-spreading proof only
+  needs this inequality, applied at $x = 9/8,\ 16/15,\ 3/2$
+  in Lemma~\ref{rs:lnnumerics}, together with the numeric bound
+  $\log 2 \le 7/10$ of Lemma~\ref{rs:ln2}.)
+\end{lemma}
+\begin{proof}
+  \rocqok
+  MathComp-Analysis' \texttt{le\_ln1Dx} ($\log(1 + y) \le y$ for $y > -1$)
+  at $y = 1/x - 1$, together with $\log(1/x) = -\log x$ (\texttt{lnV}).
+\end{proof}
+
+\begin{lemma}[Partial sums of the exponential series]\label{pr:expseries}
+  \rocq{Dynamics.prob.bounds.expR_ge_series}
+  \rocqok
+  For $x \ge 0$ and every $N$: $\sum_{k < N} x^k/k! \le \exp x$.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  The partial sums are nondecreasing (all terms are nonnegative,
+  \texttt{exp\_coeff\_ge0}) and converge to $\exp x$
+  (\texttt{is\_cvg\_series\_exp\_coeff}), so each is at most the limit
+  (\texttt{nondecreasing\_cvgn\_le}).
+\end{proof}
+
+\noindent\textbf{Remark (Rocq).} This is Mathlib's
+\texttt{Real.sum\_le\_exp\_of\_nonneg}, which MathComp-Analysis lacks (it
+only ships the single-term truncation \texttt{expR\_ge1Dxn}). It is the
+source of every numeric bound on $e$ used below: $\log 2 \le 7/10$
+(Lemma~\ref{rs:ln2}), $163/60 \le e$ (Lemma~\ref{pr:logtangent}), and the
+degree-$2$ Taylor bound of Lemma~\ref{pr:exptaylor2}.
+
+\begin{lemma}[Degree-2 Taylor lower bound]\label{pr:exptaylor2}
+  \rocq{Dynamics.prob.bounds.expR_ge_taylor2}
+  \rocqok
+  \uses{pr:expseries}
+  For $x \ge 0$: $1 + x + x^2/2 \le \exp x$.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  Lemma~\ref{pr:expseries} with $N = 3$; the factorials are rewritten to
+  numerals so that \texttt{lra} can close the goal.
+\end{proof}
+
+\begin{lemma}[Quadratic-tight logarithm bound]\label{pr:logquad}
+  \rocq{Dynamics.prob.bounds.ln_ge_quadratic}
+  \rocqok
+  \uses{pr:exptaylor2}
+  For $\tfrac12 \le x \le 1$: $(x-1)-(x-1)^2 \le \log x$. (The crude
+  linear bound $\log x \ge x-1$ is false for $x<1$ and, worse, plugging the
+  correct one-sided bound $1-\tfrac1x\le\log x$ into the Chernoff exponent
+  $k-\mu-k\log(k/\mu)$ gives exactly $0$ when $k/\mu\to1$ --- useless. This
+  quadratic correction is what makes the growth-phase Chernoff bound
+  (Lemma~\ref{mj:growthround}) bite.)
+\end{lemma}
+\begin{proof}
+  \rocqok
+  With $s := (1-x) + (1-x)^2 \ge 0$, elementary algebra gives
+  $1 \le x\,(1 + s + s^2/2)$ on $[\tfrac12, 1]$, hence
+  $1 \le x \exp s$ by Lemma~\ref{pr:exptaylor2}, i.e.\
+  $\exp(-s) \le x$, and taking logarithms $-s \le \log x$.
+\end{proof}
+
+\noindent\textbf{Remark (Rocq).} Lean derives this from Mathlib's
+degree-$3$ Taylor lower bound for $\exp$; the Rocq proof only needs the
+degree-$2$ term (Lemma~\ref{pr:exptaylor2}).
+
+\begin{lemma}[Exponential beats any fixed power]\label{pr:exppow}
+  \rocq{Dynamics.prob.bounds.expR_ge_pow, Dynamics.prob.bounds.expR_ge_cube}
+  \rocqok
+  For $x\ge0$ and any $k\in\mathbb{N}$: $x^k/k! \le \exp(x)$ --- the single
+  degree-$k$ term of the Taylor truncation. The cubic case
+  $k=3$ (\texttt{expR\_ge\_cube}) is recorded separately.
+  Choosing $k$ large enough relative to a given
+  lower bound on $\log n$ lets $n$ be shown to dominate any fixed
+  polynomial in $\log n$ using only a \emph{modest} such lower bound
+  (Lemmas~\ref{mj:stage2b}, \ref{mj:floor4} and~\ref{mj:mainfailclean})
+  --- a single low-degree truncation would instead force $\log n$ to be
+  astronomically large.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  For $k = 0$ this is $1 \le \exp x$; for $k \ge 1$ it is MathComp-Analysis'
+  \texttt{expR\_ge1Dxn} ($1 + x^k/k! \le \exp x$) minus the $1$.
+\end{proof}
+
+\begin{lemma}[Tangent-line log bound]\label{pr:logtangent}
+  \rocq{Dynamics.prob.bounds.ln_le_tangent_div,
+    Dynamics.prob.bounds.expR3_ge20}
+  \rocqok
+  \uses{pr:expseries}
+  For $L>0$ and any reference point $c>0$: $\log L \le \log c - 1 + L/c$,
+  from the crude bound $\log t \le t - 1$ applied to $t = L/c$; tight at
+  $L=c$ (equality there), unlike a bound tangent at a single globally-fixed
+  point, so choosing $c$ near the $L$ actually in play gives a far sharper
+  bound. Also records $\exp(3)\ge20$ (\texttt{expR3\_ge20}), used to
+  instantiate $c=\exp(3)$ below.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  The first bound is \texttt{le\_ln1Dx} at $L/c - 1$ plus \texttt{ln\_div}.
+  For the second, Lemma~\ref{pr:expseries} with $N = 6$ at $x = 1$ gives
+  $163/60 \le e$, and $(163/60)^3 \ge 20$.
+\end{proof}
+
+\noindent\textbf{Remark (Rocq).} Lean cubes Mathlib's $10$-digit lower bound
+\texttt{Real.exp\_one\_gt\_d9}; Rocq cubes the six-term partial sum
+$163/60 \approx 2.7167$ instead, which is all that $20 \le e^3$ needs.
+
+\begin{lemma}[Log-log bound]\label{pr:loglog}
+  \rocq{Dynamics.prob.bounds.ln_ln_le}
+  \rocqok
+  \uses{pr:logtangent}
+  For $\log x>0$: $\log\log x \le 2 + (\log x)/20$, from
+  Lemma~\ref{pr:logtangent} tangent at the reference point
+  $c=\exp(3)\approx20.09$ (so $\log c = 3$ exactly), combined with
+  $\exp(3)\ge20$ to replace $1/\exp(3)$ by the cruder but rational $1/20$.
+  Far tighter, once $\log x$ is more than a few units above $e$, than a
+  bound tangent at the fixed point $c=e$ --- exactly the regime
+  Lemma~\ref{mj:stage2b} needs. Used only inside Lemma~\ref{mj:stage2b}'s
+  numeric estimate.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  Lemma~\ref{pr:logtangent} with $L = \log x$, $c = \exp 3$ (so
+  $\log c = 3$ by \texttt{expRK}), then $L/\exp 3 \le L/20$ by
+  \texttt{expR3\_ge20} and \texttt{lef\_pV2}.
+\end{proof}
+
+\begin{lemma}[A large logarithm forces $n \ge 2$]\label{pr:lnge30}
+  \rocq{Dynamics.prob.bounds.two_le_of_ln_ge30}
+  \rocqok
+  For $n \in \mathbb{N}$: if $30 \le \log n$ then $2 \le n$.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  $\log 0 = 0$ (MathComp's \texttt{ln0} convention) and $\log 1 = 0$, so
+  $n \in \{0, 1\}$ contradicts $30 \le \log n$. This is Lean's
+  \texttt{two\_le\_of\_hbig}, used whenever a 3-majority statement assumes
+  only $\log n \ge 30$ but needs the sample space nonempty.
+\end{proof}
+
+\section{An elementary Chernoff bound}\label{pr:sec:chernoff}
+
+The only concentration tool used in the 3-majority development, and the
+only place beyond elementary combinatorics where real exponentials appear.
+Setting (a Rocq \texttt{Section}): $n$ agents; agent $i$'s private
+randomness is $x_i \in \gamma$ (a finite type $G$); its contribution is
+$Y_i(x_i) \in \{0,1\}$ (hypothesis \texttt{Y01}); the sum $X(x) := \sum_{i<n}
+Y_i(x_i)$ is a function on the product space $\{\texttt{ffun}\ 'I_n \to G\}$
+and $\mu := \sum_{i<n} \mathrm{avg}(Y_i)$ is its mean.
+
+\begin{lemma}[MGF bound]\label{pr:mgf}
+  \rocq{Dynamics.prob.chernoff.avg_exp_le}
+  \rocqok
+  \uses{pr:indep, pr:avg-basic}
+  For every real $t$ (no sign restriction):
+  \[
+    \mathbb{E}[\exp(tX)] \;\le\; \exp\bigl(\mu(e^t-1)\bigr).
+  \]
+\end{lemma}
+\begin{proof}
+  \rocqok
+  $\exp(tX(x)) = \prod_i \exp(tY_i(x_i))$, so by independence
+  (\texttt{avg\_prod\_ffun}, Lemma~\ref{pr:indep}) the left side is
+  $\prod_i \mathrm{avg}\bigl(\exp(tY_i)\bigr)$. Since $Y_i \in \{0,1\}$,
+  $\exp(tY_i) = 1 + (e^t - 1)Y_i$, whose average is
+  $1 + (e^t-1)\mathrm{avg}(Y_i) \le \exp\bigl((e^t-1)\mathrm{avg}(Y_i)\bigr)$
+  by $1 + y \le e^y$ (MathComp's \texttt{expR\_ge1Dx}, Mathlib's
+  \texttt{Real.add\_one\_le\_exp}); multiply over $i$
+  (\texttt{ler\_prod}, \texttt{expR\_sum}). The empty case $\#|G| = 0$ is
+  handled separately (both averages are $0$).
+\end{proof}
+
+\begin{lemma}[Chernoff tail bounds]\label{pr:chernoff}
+  \rocq{Dynamics.prob.chernoff.avg_tail_ge, Dynamics.prob.chernoff.avg_tail_le}
+  \rocqok
+  \uses{pr:mgf, pr:avg-basic}
+  For $t\ge0$ and any real $k$,
+  $\mathbb{P}[X\ge k] \le \exp(\mu(e^t-1)-tk)$ (\texttt{avg\_tail\_ge});
+  symmetrically for $t\le0$,
+  $\mathbb{P}[X\le k] \le \exp(\mu(e^t-1)-tk)$ (\texttt{avg\_tail\_le}).
+  Here $\mathbb{P}[X \ge k]$ is $\mathrm{avg}\bigl(x \mapsto [k \le X(x)]\bigr)$.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  Markov applied to $\exp(tX)$: pointwise
+  $[k \le X(x)] \le \exp(-tk)\exp(tX(x))$ since $t \ge 0$; push through
+  \texttt{avg\_le}, pull out the constant with \texttt{avgZ}, and apply
+  Lemma~\ref{pr:mgf}. The lower tail is symmetric.
+\end{proof}
+
+\begin{lemma}[Closed-form tail bounds at the optimal $t$]\label{pr:chernofflog}
+  \rocq{Dynamics.prob.chernoff.avg_tail_ge_ln,
+    Dynamics.prob.chernoff.avg_tail_le_ln,
+    Dynamics.prob.chernoff.avg_tail_ge_ln_le,
+    Dynamics.prob.chernoff.avg_tail_le_ln_ge}
+  \rocqok
+  \uses{pr:chernoff}
+  Plugging $t=\log(k/\mu)$ into Lemma~\ref{pr:chernoff}: for $k\ge\mu>0$,
+  \[
+    \mathbb{P}[X\ge k] \;\le\; \exp\bigl(k-\mu-k\log(k/\mu)\bigr)
+    \qquad(\texttt{avg\_tail\_ge\_ln}),
+  \]
+  and symmetrically for $0<k\le\mu$,
+  $\mathbb{P}[X\le k] \le \exp(k-\mu-k\log(k/\mu))$
+  (\texttt{avg\_tail\_le\_ln}).
+  Both closed forms are \emph{mean-scaled}: the exponent depends on the true
+  $\mu$ directly, not on a crude worst-case range/variance proxy, which
+  matters late in the saturation phase once few at-risk agents remain
+  (Lemma~\ref{mj:stage2b}). Two generalized variants take only an
+  \emph{upper} bound $\mu_{\mathrm{ub}}\ge\mu$ (\texttt{avg\_tail\_ge\_ln\_le},
+  used by the saturation phase) or a \emph{lower} bound $\mu_{\mathrm{lb}}
+  \le\mu$ (\texttt{avg\_tail\_le\_ln\_ge}, used by the growth phase) on the
+  true mean --- monotonicity of the exponent in $\mu$ at the optimal $t$
+  makes both directions sound, and this is the form each phase actually
+  needs, since the exact mean depends on $x=|I|/n$ while the phases only
+  assume an inequality on $|I|$.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  $t = \log(k/\mu)$ has the right sign in each case (\texttt{ln\_ge0} /
+  \texttt{ln\_le0}) and $e^t = k/\mu$ (\texttt{lnK}); the exponent
+  simplifies to $k - \mu - k\log(k/\mu)$ by \texttt{lra}. For the
+  generalized variants, $\mu \mapsto \mu(k/\mu_{\mathrm{ub}} - 1)$ is
+  monotone with slope $k/\mu_{\mathrm{ub}} - 1 \ge 0$ (resp.\ $\le 0$), so
+  replacing $\mu$ by its bound only weakens the exponent.
+\end{proof}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Rumor spreading (uniform push)}\label{rs:chapter}
+
+We give a complete and elementary proof that the uniform \emph{push} protocol
+on the complete graph $K_n$, started from a single informed node, informs all
+$n$ nodes within $O(\log n)$ rounds with high probability. The probability
+space is finite and uniform throughout; the only analytic ingredients are
+Bernoulli's inequality and Markov's inequality, and the only concentration
+tool is a one-line exponential-moment induction for adaptive Bernoulli
+trials. No measure theory, no Chernoff bounds, and no martingales are used.
+The Rocq development lives in \texttt{theories/rumor/} (files
+\texttt{model.v}, \texttt{oneround.v}, \texttt{growth.v},
+\texttt{saturation.v}, \texttt{main.v}); the main theorem is
+\texttt{Dynamics.rumor.main.push\_informs\_all\_whp}.
+
+\section{The model}\label{rs:sec:model}
+
+Fix $n \ge 2$ and let $V = \{0,1,\dots,n-1\}$ (the ordinal type $'I_n$) be
+the vertex set of the complete graph $K_n$.
+
+\begin{definition}[Round randomness]\label{rs:round}
+  \rocq{Dynamics.rumor.model.Tgt, Dynamics.rumor.model.tgt_gt0}
+  \rocqok
+  A \emph{round configuration} is a function
+  $\omega \colon V \to V$ with $\omega(v) \ne v$ for all $v$.
+  Let $R_n$ denote the (finite) set of round configurations; it carries the
+  uniform probability measure, i.e.\ every node picks a uniformly random
+  \emph{target} among the other $n-1$ nodes, independently of all other
+  nodes. In Rocq, $R_n$ is the dependent finite function type
+  \[
+    \texttt{Tgt}\ n \;:=\;
+    \{\texttt{dffun}\ \forall v : 'I_n,\ \{u : 'I_n \mid u \ne v\}\},
+  \]
+  exactly Lean's $\forall v : \mathrm{Fin}\ n,\ \{u \mathbin{/\!/} u \ne v\}$;
+  it is a \texttt{finType}, and it is nonempty for $n \ge 2$
+  (\texttt{tgt\_gt0}, Lean's \texttt{tgt\_nonempty}).
+\end{definition}
+
+\begin{definition}[Push step]\label{rs:step}
+  \rocq{Dynamics.rumor.model.step, Dynamics.rumor.model.mem_step}
+  \rocqok
+  \uses{rs:round}
+  For an \emph{informed set} $I \subseteq V$ (a finite set
+  $\{\texttt{set}\ 'I_n\}$) and a round configuration
+  $\omega \in R_n$, the next informed set is
+  \[
+    \mathrm{step}(I,\omega) \;=\; I \,\cup\, \omega(I)
+    \;=\; I \cup \{\omega(v) : v \in I\},
+  \]
+  in Rocq \texttt{I :|: [set val (r v) | v in I]}; membership is
+  characterized by \texttt{mem\_step}.
+  (Only informed nodes actually transmit; letting \emph{all} nodes draw a
+  target and ignoring the choices of uninformed nodes is an equivalent and
+  formalization-friendlier convention.)
+\end{definition}
+
+\begin{definition}[Process]\label{rs:process}
+  \rocq{Dynamics.rumor.model.run, Dynamics.rumor.model.run_nil,
+    Dynamics.rumor.model.run_cons, Dynamics.rumor.model.run_cat,
+    Dynamics.rumor.model.card_run_le}
+  \rocqok
+  \uses{rs:step}
+  Fix a horizon $T \in \mathbb{N}$ and a start vertex $v_0 \in V$. The sample
+  space is $\Omega = R_n^{\,T}$ (uniform measure, i.e.\ i.i.d.\ uniform
+  rounds). For $\omega = (\omega_0,\dots,\omega_{T-1}) \in \Omega$ define
+  $I_0(\omega) = \{v_0\}$ and
+  $I_{t+1}(\omega) = \mathrm{step}(I_t(\omega), \omega_t)$ for $0 \le t < T$.
+  We write $m_t = |I_t|$ and $U_t = n - m_t$ for the numbers of informed and
+  uninformed nodes. Since $\Omega$ is finite, all probabilities are finite
+  ratios and all expectations are finite sums; ``conditioning on $I_t$''
+  means partitioning $\Omega$ according to the first $t$ coordinates. In the
+  formalization, a trajectory is simply a \texttt{seq} of round
+  configurations and $\mathrm{run}\ I\ s$ folds \texttt{step} over the list
+  $s$ (\texttt{run\_nil}, \texttt{run\_cons}); it is compatible with
+  concatenation (\texttt{run\_cat}, Lean's \texttt{run\_append}) and
+  $|\mathrm{run}\ I\ s| \le n$ (\texttt{card\_run\_le}).
+\end{definition}
+
+Two trivial but load-bearing facts, both immediate from
+Definition~\ref{rs:step}:
+
+\begin{lemma}[Monotonicity]\label{rs:mono}
+  \rocq{Dynamics.rumor.model.subset_step,
+    Dynamics.rumor.model.card_le_card_step, Dynamics.rumor.model.subset_run}
+  \rocqok
+  \uses{rs:process}
+  $I_t(\omega) \subseteq I_{t+1}(\omega)$ for all $t$ and all $\omega$;
+  hence $m_t$ is non-decreasing and $U_t$ is non-increasing in $t$,
+  pointwise on $\Omega$.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  $I \subseteq I \cup \omega(I)$ (\texttt{subsetUl}); cardinalities by
+  \texttt{subset\_leq\_card}; along a trajectory by induction on the list.
+\end{proof}
+
+\begin{lemma}[At most doubling]\label{rs:atmost}
+  \rocq{Dynamics.rumor.model.card_step_le}
+  \rocqok
+  \uses{rs:step}
+  $|I_{t+1}(\omega) \smallsetminus I_t(\omega)| \le |I_t(\omega)|$; equivalently
+  $|\mathrm{step}(I,\omega)| \le 2\,|I|$.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  \texttt{cardsU} and the image bound \texttt{leq\_imset\_card}.
+\end{proof}
+
+\section{Main theorem}\label{rs:sec:main-statement}
+
+\begin{theorem}[Push protocol informs $K_n$ in $O(\log n)$ rounds w.h.p.]
+  \label{rs:main}
+  \rocq{Dynamics.rumor.main.push_informs_all_whp,
+    Dynamics.rumor.main.push_informs_all_whp'}
+  \rocqok
+  \uses{rs:gluing, rs:constants, rs:phase2cor}
+  Let $n \ge 2$, let $v_0 \in V$, and set
+  \[
+    T_1 \;=\; \lceil 117 \log n \rceil + 23, \qquad
+    T_2 \;=\; \lceil 6 \log n \rceil, \qquad
+    T \;=\; T_1 + T_2 .
+  \]
+  Then $\mathbb{P}\bigl[\, I_T = V \,\bigr] \;\ge\; 1 - \frac{2}{n}$
+  (\texttt{push\_informs\_all\_whp'}); equivalently
+  $\mathrm{prNotAllInformed}(n, v_0, T) \le 2/n$
+  (\texttt{push\_informs\_all\_whp}, Definition~\ref{rs:prNotAllInformed}).
+  In particular all nodes are informed after $O(\log n)$ rounds with high
+  probability. The ceilings are \texttt{ceiln}, applied to
+  $117 \log n$ and $6 \log n$ with $\log n$ written \texttt{ln n\%:R}.
+\end{theorem}
+\begin{proof}
+  \rocqok
+  With $L = \lceil 9\log n \rceil + 1$, Lemma~\ref{rs:gluing},
+  Lemma~\ref{rs:constants} and Corollary~\ref{rs:phase2cor} give
+  \[
+    \mathbb{P}[I_T \ne V] \;=\; \mathbb{P}[U_T \ge 1]
+    \;\le\; \mathbb{P}[\,\overline{A}\,]
+      + \mathbb{P}[\,U_T \ge 1 \text{ and } A\,]
+    \;\le\; \frac1n + \frac1n \;=\; \frac2n ,
+  \]
+  where $A = \{m_{T_1} > n/2\}$. The primed form follows since the
+  indicators of $I_T = V$ and $I_T \ne V$ sum to $1$ and
+  $\mathrm{expList}$ of the constant $1$ is $1$
+  (Lemma~\ref{pr:expList-basic}).
+\end{proof}
+
+\noindent\textbf{Remark.}
+  The constants are deliberately crude: the proof is organized to minimize
+  the analytic toolkit, not the round count. The sharp answer is
+  $\log_2 n + \log n + o(\log n)$ (Frieze--Grimmett \cite{FG85}, Pittel
+  \cite{Pittel87}). Replacing $2/n$ by $n^{-\alpha}$ for any fixed
+  $\alpha \ge 1$ only changes the constants in $T_1, T_2$.
+
+The proof has two phases, glued by Lemma~\ref{rs:mono}:
+\begin{itemize}
+\item \textbf{Growth phase} (Section~\ref{rs:sec:growth}): while $m_t \le n/2$,
+  each round multiplies $m_t$ by $\ge 9/8$ with probability $\ge 1/8$;
+  an exponential-moment bound for adaptive trials shows that after $T_1$
+  rounds, $m_{T_1} > n/2$ except with probability $\le 1/n$.
+\item \textbf{Saturation phase} (Section~\ref{rs:sec:saturation}): once
+  $m_t \ge n/2$, the expected number of uninformed nodes contracts by a
+  factor $2/3$ per round; after $T_2$ further rounds Markov's inequality
+  gives $U_T = 0$ except with probability $\le 1/n$.
+\end{itemize}
+
+\section{One-round estimates}\label{rs:sec:oneround}
+
+Fix an informed set $I$ with $|I| = m \ge 1$ and let $\omega \in R_n$ be a
+uniform round configuration. All statements in this section concern this
+single round; by independence of the rounds they apply verbatim to the
+conditional law of round $t$ given $I_t = I$.
+
+\begin{lemma}[Products of cardinalities]\label{rs:foldr}
+  \rocq{Dynamics.rumor.oneround.foldr_muln_map}
+  \rocqok
+  For $g \colon T \to \mathbb{N}$ and a list $s$,
+  $\mathrm{foldr}\ (\cdot)\ 1\ [g\,v \mid v \leftarrow s] = \prod_{v \in s} g\,v$.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  Induction on $s$. This is the shape in which MathComp's
+  \texttt{card\_dep\_ffun} / \texttt{card\_family} deliver cardinalities of
+  dependent function types, so the two counting lemmas below need it to
+  turn a fold into a \texttt{bigop} product.
+\end{proof}
+
+\begin{lemma}[Number of round configurations]\label{rs:card-tgt}
+  \rocq{Dynamics.rumor.oneround.card_tgt}
+  \rocqok
+  \uses{rs:round, rs:foldr}
+  $|R_n| = (n-1)^n$.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  \texttt{card\_dep\_ffun} gives a product over $v$ of
+  $|\{u : u \ne v\}| = n - 1$ (\texttt{card\_sig}, \texttt{cardC1}).
+\end{proof}
+
+\begin{lemma}[Contact probability]\label{rs:contact}
+  \rocq{Dynamics.rumor.oneround.card_sig_ne_ne,
+    Dynamics.rumor.oneround.card_not_contacted,
+    Dynamics.rumor.oneround.avg_not_contacted}
+  \rocqok
+  \uses{rs:step, pr:avg, pr:avg-basic, rs:card-tgt, rs:foldr}
+  For any fixed $u \notin I$,
+  \[
+    \mathbb{P}_\omega\bigl[u \notin \mathrm{step}(I,\omega)\bigr]
+    \;=\; \Bigl(1-\frac{1}{n-1}\Bigr)^{m},
+    \qquad\text{i.e.}\qquad
+    \mathbb{P}_\omega\bigl[u \in \mathrm{step}(I,\omega)\bigr]
+    \;=\; 1 - \Bigl(1-\frac{1}{n-1}\Bigr)^{m}.
+  \]
+  This is the only place where a probability is \emph{computed}
+  rather than estimated: the number of round configurations in which no
+  member of $I$ targets $u$ is $(n-2)^{m}(n-1)^{n-m}$
+  (\texttt{card\_not\_contacted}), using
+  $|\{x : x \ne v,\ x \ne u\}| = n - 2$ for $v \ne u$
+  (\texttt{card\_sig\_ne\_ne}).
+\end{lemma}
+\begin{proof}
+  \rocqok
+  The event ``no $v \in I$ targets $u$'' is the family of dependent
+  functions whose $v$-th component avoids $u$ when $v \in I$ and is
+  unconstrained otherwise; \texttt{card\_family} and Lemma~\ref{rs:foldr}
+  turn its cardinality into $\prod_{v \in I}(n-2)\prod_{v \notin I}(n-1)$.
+  Dividing by $|R_n| = (n-1)^n$ (Lemma~\ref{rs:card-tgt}) via
+  \texttt{avg\_ind} gives $\bigl((n-2)/(n-1)\bigr)^m$.
+\end{proof}
+
+\noindent\textbf{Remark (Rocq).} Lean counts through an explicit
+equivalence to a product of subtypes and \texttt{Fintype.card\_pi}; Rocq
+uses the \texttt{family} predicate and \texttt{card\_family} directly,
+which is why the indicator is first rewritten as
+$[\forall v \in I,\ \omega(v) \ne u]$ (a \texttt{forall\_inP} reflection).
+
+\begin{lemma}[Expected growth]\label{rs:expgrowth}
+  \rocq{Dynamics.rumor.oneround.avg_card_step}
+  \rocqok
+  \uses{rs:contact, pr:bonferroni, pr:avg-basic}
+  Let $N(\omega) = |\mathrm{step}(I,\omega)| - m$ be the number of newly
+  informed nodes. The formalization gives the \emph{exact} formula
+  \[
+    \mathbb{E}_\omega[|\mathrm{step}(I,\omega)|] \;=\;
+      m + (n-m)\bigl(1-(1-x)^m\bigr), \qquad x = \tfrac{1}{n-1},
+  \]
+  from which, if $1 \le m \le n/2$: $\mathbb{E}_\omega[N] \ge m/4$ (using
+  Lemma~\ref{pr:bonferroni} and $n - m \ge n/2$, $mx \le 1$; in Rocq this
+  consequence is derived inline in the proof of Lemma~\ref{rs:goodround}).
+\end{lemma}
+\begin{proof}
+  \rocqok
+  $|\mathrm{step}(I,\omega)| = m + \sum_{u \notin I} [u \in
+  \mathrm{step}(I,\omega)]$ since $I \subseteq \mathrm{step}(I,\omega)$;
+  apply \texttt{avgD}, \texttt{avg\_sum}, \texttt{avgB} and
+  Lemma~\ref{rs:contact} to each of the $n - m$ terms.
+\end{proof}
+
+\begin{lemma}[A good round has constant probability]\label{rs:goodround}
+  \rocq{Dynamics.rumor.oneround.prob_goodRound}
+  \rocqok
+  \uses{rs:expgrowth, rs:atmost, pr:revmarkov, pr:bonferroni, rs:good}
+  If $1 \le m \le n/2$, then
+  $\mathbb{P}_\omega\bigl[\,|\mathrm{step}(I,\omega)| \ge \tfrac{9}{8}\,m\,\bigr]
+    \ge \tfrac18$. In Rocq the statement is
+  $1/8 \le \mathrm{avg}\bigl(\omega \mapsto [\mathrm{goodRound}\ I\ \omega]\bigr)$
+  for $I \ne \emptyset$ (Definition~\ref{rs:good}); when $m > n/2$ every
+  round is good and the bound is trivial.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  Reverse Markov (Lemma~\ref{pr:revmarkov}), inline: pointwise
+  $|\mathrm{step}(I,\omega)| \le \tfrac98 m + m\,[\mathrm{goodRound}]$
+  because a round at most doubles $m$ (Lemma~\ref{rs:atmost}); averaging and
+  comparing with $\mathbb{E}|\mathrm{step}| \ge m + m/4$
+  (Lemma~\ref{rs:expgrowth} with Lemma~\ref{pr:bonferroni}, using
+  $m x \le 1$ and $n - m \ge n/2$) gives
+  $m/8 \le m\,\mathbb{P}[\mathrm{good}]$.
+\end{proof}
+
+\begin{lemma}[Contraction above half]\label{rs:contract}
+  \rocq{Dynamics.rumor.oneround.avg_uninformed_le}
+  \rocqok
+  \uses{rs:contact, rs:expgrowth, pr:upper}
+  If $m \ge n/2$, then for every fixed $u \notin I$,
+  $\mathbb{P}_\omega[u \notin \mathrm{step}(I,\omega)] = (1-x)^m \le \tfrac23$,
+  and consequently, with $U' := n - |\mathrm{step}(I,\omega)|$,
+  $\mathbb{E}_\omega[U'] \le \tfrac23(n-m)$.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  By Lemma~\ref{rs:expgrowth}, $\mathbb{E}[U'] = (n-m)(1-x)^m$, and
+  $(1-x)^m \le 1/(1 + mx) \le 2/3$ by Lemma~\ref{pr:upper} since
+  $mx \ge 1/2$.
+\end{proof}
+
+\section{Adaptive Bernoulli trials}\label{rs:sec:adaptive}
+
+\begin{definition}[Good rounds]\label{rs:good}
+  \rocq{Dynamics.rumor.model.goodRound, Dynamics.rumor.model.goodCount,
+    Dynamics.rumor.model.goodCount_nil, Dynamics.rumor.model.goodCount_cons}
+  \rocqok
+  \uses{rs:step}
+  A round is \emph{good} if it multiplies the informed set by $\ge 9/8$, or
+  if the informed set already exceeds $n/2$:
+  \[
+    X_t \;=\; \mathbf{1}\Bigl[\, m_{t+1} \ge \tfrac98\, m_t
+    \;\;\text{or}\;\; m_t > \tfrac n2 \,\Bigr] \in \{0,1\}.
+  \]
+  In Rocq, $\mathrm{goodRound}\ I\ \omega$ is the boolean
+  $(9|I| \le 8|\mathrm{step}(I,\omega)|) \lor (n < 2|I|)$ (Lean: a decidable
+  proposition), and $\mathrm{goodCount}$ counts the good rounds along a
+  trajectory by recursion on the list (\texttt{goodCount\_nil},
+  \texttt{goodCount\_cons}). By
+  Lemma~\ref{rs:goodround} (applied when $m_t \le n/2$; trivial otherwise),
+  $\mathbb{P}[X_t = 1 \mid \omega_0,\dots,\omega_{t-1}] \ge \tfrac18$ for every
+  prefix, since $\omega_t$ is independent of the prefix and
+  $\mathrm{expList}$ conditions on it definitionally.
+\end{definition}
+
+\begin{lemma}[Exponential moment for adaptive trials]\label{rs:adaptive}
+  \rocq{Dynamics.rumor.growth.avg_half_pow_good,
+    Dynamics.rumor.growth.expList_half_pow_goodCount}
+  \rocqok
+  \uses{pr:expList, pr:expList-basic, rs:good, rs:goodround}
+  For every $k$ and every nonempty $I$,
+  \[
+    \mathbb{E}\Bigl[\bigl(\tfrac12\bigr)^{\mathrm{goodCount}(I,\,\cdot\,)}\Bigr]
+      \;\le\; \Bigl(\frac{15}{16}\Bigr)^{k}
+  \]
+  over $k$ rounds started at $I$ (\texttt{expList\_half\_pow\_goodCount}).
+  (This specializes the textbook
+  ``$\mathbb{E}[s^G] \le (1-p(1-s))^T$ for adaptive $\{0,1\}$-trials with
+  per-step success probability $\ge p$'' at $p = 1/8$, $s = 1/2$; the
+  formalization proves the specialized statement directly by induction on
+  $k$ rather than the general one, since only this instance is needed. The
+  ensuing tail bound $\mathbb{P}[G < L] \le 2^{L}(15/16)^{k}$ --- via
+  $s^{L}\mathbb{P}[G<L] \le \mathbb{E}[s^G]$ --- is likewise not isolated as
+  a separate lemma; it is proved inline inside Lemma~\ref{rs:phase1}.)
+\end{lemma}
+\begin{proof}
+  \rocqok
+  One round: $(1/2)^{[\mathrm{good}]} = 1 - \tfrac12[\mathrm{good}]$, whose
+  average is at most $1 - \tfrac12\cdot\tfrac18 = \tfrac{15}{16}$ by
+  Lemma~\ref{rs:goodround} (\texttt{avg\_half\_pow\_good}; the exponent is
+  the boolean coerced to \texttt{nat}). Then induction on $k$: unfold
+  $\mathrm{expList}$ one round, split
+  $(1/2)^{\mathrm{goodCount}(I, \omega :: s)} = (1/2)^{[\mathrm{good}]}
+  (1/2)^{\mathrm{goodCount}(\mathrm{step}(I,\omega), s)}$, apply the
+  induction hypothesis to the (still nonempty) set
+  $\mathrm{step}(I,\omega)$ and pull the constant out with
+  \texttt{expListZ}/\texttt{avgZ}.
+\end{proof}
+
+\section{Growth phase}\label{rs:sec:growth}
+
+\begin{lemma}[Enough good rounds force half-saturation]\label{rs:force}
+  \rocq{Dynamics.rumor.model.pow_goodCount_mul_card_le_card_run}
+  \rocqok
+  \uses{rs:good, rs:mono}
+  If the informed set is still $\le n/2$ after the trajectory $s$, then
+  along that trajectory
+  $(9/8)^{\mathrm{goodCount}(I, s)} \cdot |I| \le |\mathrm{run}\ I\ s|$:
+  every good round multiplied $m_t$ by $\ge 9/8$ and every round is
+  non-decreasing (Lemma~\ref{rs:mono}). Hence if $(9/8)^L > n/2$ then
+  $\mathrm{goodCount} \ge L$ would force $m > n/2$, a contradiction: below
+  half-saturation, $\mathrm{goodCount} < L$.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  Induction on the list $s$. Since the final set is $\le n/2$ and sets only
+  grow, $|I| \le n/2$, so the disjunct $n < 2|I|$ of $\mathrm{goodRound}$ is
+  false and a good first round means $9|I| \le 8|\mathrm{step}(I,\omega)|$;
+  combine with the induction hypothesis for $\mathrm{step}(I,\omega)$
+  (\texttt{nra}).
+\end{proof}
+
+\begin{lemma}[Phase 1]\label{rs:phase1}
+  \rocq{Dynamics.rumor.growth.phase1}
+  \rocqok
+  \uses{rs:force, rs:adaptive, pr:expList-basic}
+  If $n \le (9/8)^L$, then after $k_1$ rounds from $I_0 = \{v_0\}$ the
+  informed set is still $\le n/2$ with probability at most
+  $2^{L}\,(15/16)^{k_1}$:
+  \[
+    \mathrm{expList}\ k_1\ \bigl(s \mapsto [\,2\,|\mathrm{run}\ \{v_0\}\ s| \le n\,]\bigr)
+    \;\le\; 2^L (15/16)^{k_1}.
+  \]
+\end{lemma}
+\begin{proof}
+  \rocqok
+  Pointwise: if $2|\mathrm{run}\ \{v_0\}\ s| \le n$ then by
+  Lemma~\ref{rs:force} $(9/8)^{\mathrm{goodCount}} \le n/2 < n \le (9/8)^L$,
+  so $\mathrm{goodCount} < L$ (\texttt{ltr\_eXn2l}) and
+  $1 \le 2^L (1/2)^{\mathrm{goodCount}}$; hence the indicator is at most
+  $2^L (1/2)^{\mathrm{goodCount}(\{v_0\}, s)}$ everywhere. Push through
+  \texttt{expList\_le}, pull out $2^L$ and apply Lemma~\ref{rs:adaptive}.
+\end{proof}
+
+\begin{lemma}[Elementary logarithm values]\label{rs:lnnumerics}
+  \rocq{Dynamics.rumor.main.ln98_ge, Dynamics.rumor.main.ln1615_ge,
+    Dynamics.rumor.main.ln32_ge}
+  \rocqok
+  \uses{pr:logbounds}
+  $\log\tfrac98 \ge \tfrac19$, $\log\tfrac{16}{15} \ge \tfrac1{16}$ and
+  $\log\tfrac32 \ge \tfrac13$.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  Lemma~\ref{pr:logbounds} at $x = 9/8, 16/15, 3/2$ (Lean:
+  \texttt{log\_ge\_198}, \texttt{log\_ge\_1615}, \texttt{log\_ge\_32},
+  proved inline).
+\end{proof}
+
+\begin{lemma}[$\log 2 \le 7/10$]\label{rs:ln2}
+  \rocq{Dynamics.rumor.main.ln2_le}
+  \rocqok
+  \uses{pr:expseries}
+  $\log 2 \le \tfrac{7}{10}$.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  Lemma~\ref{pr:expseries} with $N = 4$ at $x = 7/10$ gives
+  $2 \le 1 + 0.7 + 0.245 + 0.0571\ldots \le \exp(7/10)$; take logarithms.
+\end{proof}
+
+\noindent\textbf{Remark (Rocq).} Lean uses Mathlib's
+\texttt{Real.log\_two\_lt\_d9} ($\log 2 < 0.6931471808$), which
+MathComp-Analysis lacks; the crude $7/10$ is enough because the constants
+$9$, $117$, $23$ of Lemma~\ref{rs:constants} satisfy
+$9 \cdot 0.7 + 1 \le 117/16$.
+
+\begin{lemma}[Ceiling brackets]\label{rs:ceiln}
+  \rocq{Dynamics.rumor.main.ceiln_ge, Dynamics.rumor.main.ceiln_lt}
+  \rocqok
+  For real $x \ge 0$: $x \le \lceil x \rceil < x + 1$, where
+  $\lceil x \rceil = \texttt{ceiln}\ x = \lvert\texttt{Num.ceil}\ x\rvert
+  \in \mathbb{N}$.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  \texttt{Num.ceil} returns an integer, nonnegative for $x \ge 0$
+  (\texttt{ceil\_ge0}), so its absolute value is itself
+  (\texttt{natr\_absz}, \texttt{ger0\_norm}); then \texttt{ceil\_ge} and
+  \texttt{ceilB1\_lt}. These are Lean's \texttt{Nat.le\_ceil} and
+  \texttt{Nat.ceil\_lt\_add\_one} for \texttt{Nat.ceil}.
+\end{proof}
+
+\begin{lemma}[Admissible constants]\label{rs:constants}
+  \rocq{Dynamics.rumor.main.numeric_A, Dynamics.rumor.main.numeric_B}
+  \rocqok
+  \uses{rs:phase1, pr:logbounds, rs:lnnumerics, rs:ln2, rs:ceiln}
+  With $L = \lceil 9 \log n \rceil + 1$ we have $n \le (9/8)^L$
+  (\texttt{numeric\_A}), and with $T_1 = \lceil 117 \log n \rceil + 23$ we have
+  $2^{L}(15/16)^{T_1} \le 1/n$ (\texttt{numeric\_B}), using
+  $\log\tfrac98 \ge \tfrac19$, $\log\tfrac{16}{15} \ge \tfrac1{16}$ and
+  $\log 2 \le 0.7$. Combined with Lemma~\ref{rs:phase1}:
+  $\mathbb{P}[m_{T_1} \le n/2] \le 1/n$. The clean statement to formalize is
+  that \emph{any} $L, T_1$ satisfying these two numeric inequalities work;
+  the values above merely exhibit admissible ones.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  Write $n = \exp(\log n)$ and every power $a^k$ as $\exp(k \log a)$
+  (\texttt{expRM\_natl}, \texttt{lnK}); then compare exponents with
+  \texttt{ler\_expR}. For \texttt{numeric\_A}: $\lceil 9\log n\rceil \ge
+  9\log n$ and $\log\tfrac98 \ge \tfrac19$ give $L\log\tfrac98 \ge \log n$.
+  For \texttt{numeric\_B}: $\lceil 9\log n\rceil < 9\log n + 1$ and
+  $\lceil 117\log n\rceil \ge 117\log n$ give
+  $(9\log n + 2)\cdot 0.7 - (117\log n + 23)/16 \le -\log n$
+  (\texttt{lra}).
+\end{proof}
+
+\section{Saturation phase}\label{rs:sec:saturation}
+
+\begin{lemma}[Phase 2]\label{rs:phase2}
+  \rocq{Dynamics.rumor.saturation.saturation}
+  \rocqok
+  \uses{rs:contract, pr:expList-basic}
+  For every $I$ with $|I| \ge n/2$ and every $k \ge 0$,
+  $\mathbb{E}\bigl[\, n - |\mathrm{run}\ I\ s| \,\bigr] \le (2/3)^{k}\,(n - |I|)$
+  over $k$ rounds started at $I$. Consequently, with
+  $A = \{m_{T_1} > n/2\}$ (an event determined by the first $T_1$
+  coordinates), $\mathbb{E}\bigl[\, U_{T_1 + k}\, \mathbf{1}_A \,\bigr] \le
+  (2/3)^{k}\, n$.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  Induction on $k$ using Lemma~\ref{rs:contract} at each step;
+  monotonicity (\texttt{card\_le\_card\_step}) keeps
+  $|\mathrm{step}(I,\omega)| \ge n/2$ so the induction hypothesis applies.
+\end{proof}
+
+\begin{corollary}\label{rs:phase2cor}
+  \rocq{Dynamics.rumor.main.numeric_C}
+  \rocqok
+  \uses{rs:phase2, pr:markov, pr:logbounds, rs:lnnumerics, rs:ceiln}
+  With $T_2 = \lceil 6 \log n \rceil$: $\mathbb{P}[\, U_T \ge 1 \text{ and } A \,]
+    \le n\,(2/3)^{T_2} \le 1/n$. ($U_T$ is $\mathbb{N}$-valued, so Markov
+  applied to $U_T \mathbf{1}_A$ and Lemma~\ref{rs:phase2} give the first
+  inequality; $(2/3)^{T_2} n \le 1/n$ --- \texttt{numeric\_C} --- follows
+  from $\log\tfrac32 \ge \tfrac13$ and $T_2 \ge 6\log n$.)
+\end{corollary}
+\begin{proof}
+  \rocqok
+  As in Lemma~\ref{rs:constants}: $(2/3)^{T_2} n = \exp(\log n - T_2
+  \log\tfrac32) \le \exp(\log n - 2\log n) = 1/n$ using
+  Lemmas~\ref{rs:lnnumerics} and~\ref{rs:ceiln}.
+\end{proof}
+
+\section{Proof of the main theorem}\label{rs:sec:proof-main}
+
+\begin{definition}[Failure probability]\label{rs:prNotAllInformed}
+  \rocq{Dynamics.rumor.main.prNotAllInformed}
+  \rocqok
+  \uses{rs:process, pr:expList}
+  $\mathrm{prNotAllInformed}(n,v_0,k) :=
+  \mathrm{expList}\ k\ \bigl(s \mapsto [\mathrm{run}\ \{v_0\}\ s \ne V]\bigr)$
+  is the probability that some node is still uninformed after $k$ rounds
+  started at $v_0$.
+\end{definition}
+
+\begin{lemma}[Gluing the two phases]\label{rs:gluing}
+  \rocq{Dynamics.rumor.main.prNotAllInformed_le}
+  \rocqok
+  \uses{rs:prNotAllInformed, rs:phase1, rs:phase2, rs:mono, pr:expList-basic}
+  For all $L, k_1, k_2$ with $n \le (9/8)^L$:
+  \[
+    \mathrm{prNotAllInformed}(n,v_0,k_1+k_2) \;\le\;
+      2^{L}\Bigl(\frac{15}{16}\Bigr)^{k_1} + \Bigl(\frac23\Bigr)^{k_2} n.
+  \]
+  Failure requires either phase 1 to fail (informed set still $\le n/2$
+  after $k_1$ rounds, Lemma~\ref{rs:phase1}) or phase 2 to leave an
+  uninformed node on the complementary event, controlled by
+  Lemma~\ref{rs:phase2} via Markov.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  Split the horizon with \texttt{expList\_cat}. For a fixed prefix $s_1$:
+  if $2|\mathrm{run}\ \{v_0\}\ s_1| \le n$ bound the inner expectation by
+  $1$; otherwise $[\mathrm{run} \ne V] \le n - |\mathrm{run}|$ pointwise
+  (Markov for an $\mathbb{N}$-valued variable) and Lemma~\ref{rs:phase2}
+  applied to $\mathrm{run}\ \{v_0\}\ s_1$ bounds the inner expectation by
+  $(2/3)^{k_2}(n - |\mathrm{run}\ \{v_0\}\ s_1|) \le (2/3)^{k_2} n$. So the
+  inner expectation is at most
+  $[\,2|\mathrm{run}\ \{v_0\}\ s_1| \le n\,] + (2/3)^{k_2} n$; take the outer
+  expectation with \texttt{expListD}, \texttt{expList\_const} and
+  Lemma~\ref{rs:phase1}.
+\end{proof}
+
+With $T_1 = \lceil 117\log n \rceil + 23$, $T_2 = \lceil 6\log n \rceil$,
+$T = T_1+T_2$, Theorem~\ref{rs:main} follows from Lemma~\ref{rs:gluing},
+Lemma~\ref{rs:constants} and Corollary~\ref{rs:phase2cor}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{3-majority dynamics}\label{mj:chapter}
+
+We give a complete, elementary proof that the \emph{3-majority}
+opinion-dynamics process on $n$ fully-mixing agents, each holding one of two
+opinions, reaches consensus within $O(\log n)$ rounds with probability
+$1-O(1/n)$, provided the initial imbalance between the two opinions exceeds
+a fixed constant fraction of $n$ (at least $60\%$ vs.\ $40\%$). The
+probability space is finite and uniform throughout; the only analytic
+ingredient beyond finite sums is the self-contained exponential-moment
+(Chernoff-type) concentration lemma of Section~\ref{pr:sec:chernoff}. This
+is a genuinely different regime from the push protocol of
+Chapter~\ref{rs:chapter}: the opinion-$1$ count is \emph{not} monotone in
+the round index (an unlucky round can shrink it), so a counting argument
+over ``good rounds'' does not suffice --- honest concentration around the
+process's mean trajectory is needed in \emph{both} the growth and saturation
+phases. The Rocq development lives in \texttt{theories/majority/} (files
+\texttt{model.v}, \texttt{oneround.v}, \texttt{growth.v},
+\texttt{saturation.v}, \texttt{main.v}); the main theorem is
+\texttt{Dynamics.majority.main.majority3\_consensus\_whp}.
+
+\section{The model}\label{mj:sec:model}
+
+Fix $n \ge 1$ and let $V = \{0,1,\dots,n-1\}$ (the ordinal type $'I_n$) be
+the set of agents, each holding one of two opinions, $1$ (``red'') or $0$
+(``blue''). Write $I \subseteq V$ for the set of agents currently holding
+opinion $1$.
+
+\begin{definition}[Round randomness]\label{mj:round}
+  \rocq{Dynamics.majority.model.Tgt3, Dynamics.majority.model.tgt3_gt0}
+  \rocqok
+  A \emph{round configuration} is a function $r \colon V \to V \times V
+  \times V$ assigning to every agent $v$ an ordered triple of \emph{samples},
+  each drawn independently and uniformly from $V$, \emph{with} replacement
+  (an agent may sample itself, or the same agent twice --- harmless, since a
+  majority of three Boolean values is always well defined). Let
+  $R_n = V^{3V}$ denote the (finite) set of round configurations, with the
+  uniform probability measure. In Rocq,
+  $\texttt{Tgt3}\ n := \{\texttt{ffun}\ 'I_n \to 'I_n \times ('I_n \times 'I_n)\}$,
+  with the triple right-nested exactly as in Lean so that the projections
+  $t.1$, $t.2.1$, $t.2.2$ match; it is nonempty for $n \ge 1$
+  (\texttt{tgt3\_gt0}, Lean's \texttt{tgt3\_nonempty}).
+\end{definition}
+
+\begin{definition}[Majority step]\label{mj:step}
+  \rocq{Dynamics.majority.model.sampleCountOf,
+    Dynamics.majority.model.sampleCount, Dynamics.majority.model.step,
+    Dynamics.majority.model.mem_step, Dynamics.majority.model.card_step_le}
+  \rocqok
+  \uses{mj:round}
+  For an opinion-$1$ set $I \subseteq V$ and $r \in R_n$,
+  \[
+    \mathrm{step}(I,r) \;=\; \{\, v \in V : \text{at least two of } r(v)\text{'s three
+    coordinates lie in } I \,\}.
+  \]
+  Each agent independently samples $3$ agents and adopts the majority of
+  their current opinions. $\mathrm{sampleCountOf}\ I\ t \in \{0,1,2,3\}$
+  counts how many coordinates of the triple $t$ lie in $I$,
+  $\mathrm{sampleCount}\ I\ r\ v = \mathrm{sampleCountOf}\ I\ (r\,v)$, and
+  $v \in \mathrm{step}(I,r) \iff 2 \le \mathrm{sampleCount}\ I\ r\ v$
+  (\texttt{mem\_step}); trivially $|\mathrm{step}(I,r)| \le n$
+  (\texttt{card\_step\_le}).
+\end{definition}
+
+\begin{definition}[Process]\label{mj:process}
+  \rocq{Dynamics.majority.model.run, Dynamics.majority.model.run_nil,
+    Dynamics.majority.model.run_cons, Dynamics.majority.model.run_cat}
+  \rocqok
+  \uses{mj:step}
+  Fix a horizon $T \in \mathbb{N}$ and an initial set $I_0 \subseteq V$. The
+  sample space is $\Omega = R_n^{\,T}$ with the uniform (i.i.d.) measure. For
+  $r = (r_0,\dots,r_{T-1}) \in \Omega$ define $I_{t+1} =
+  \mathrm{step}(I_t, r_t)$. We write $X_t = |I_t|$ and $U_t = n - X_t$. In
+  the formalization, a trajectory is a \texttt{seq} of round configurations
+  and $\mathrm{run}\ I\ s$ folds \texttt{step} over the list $s$
+  (\texttt{run\_nil}, \texttt{run\_cons}, \texttt{run\_cat}).
+\end{definition}
+
+\begin{lemma}[Monotone coupling]\label{mj:mono}
+  \rocq{Dynamics.majority.model.sampleCount_mono,
+    Dynamics.majority.model.step_mono, Dynamics.majority.model.run_mono}
+  \rocqok
+  \uses{mj:step, mj:process}
+  For a \emph{fixed} round $r$, the map $I \mapsto \mathrm{step}(I,r)$ is
+  monotone: $I \subseteq I'$ implies $\mathrm{step}(I,r) \subseteq
+  \mathrm{step}(I',r)$; iterating over a trajectory, $\mathrm{run}$ is
+  monotone in the same sense. This is purely combinatorial (no probability
+  involved).
+\end{lemma}
+\begin{proof}
+  \rocqok
+  Each of the three membership indicators is monotone in $I$, hence so is
+  $\mathrm{sampleCount}$ (\texttt{sampleCount\_mono}); then
+  $\mathrm{step}$ and, by induction on the list, $\mathrm{run}$.
+\end{proof}
+
+\noindent\textbf{Remark.}
+  Unlike the push protocol, where the analogous monotonicity
+  (Lemma~\ref{rs:mono}) is load-bearing throughout, here the
+  per-round probabilistic estimates below (Lemmas~\ref{mj:growthround},
+  \ref{mj:satclosed}, etc.) are instead stated and proved directly for
+  \emph{any} set $I$ satisfying a hypothesis on $|I|$, using monotonicity of
+  the real polynomial $p$ of Section~\ref{mj:sec:map} on $[0,1]$ rather than
+  a reference-embedding argument via Lemma~\ref{mj:mono}.
+  Lemma~\ref{mj:mono} is recorded because it is the exact analogue of the
+  push protocol's structural fact, but it is not otherwise used by the chain
+  of lemmas leading to the main theorem.
+
+\section{Main theorem}\label{mj:sec:main-statement}
+
+\begin{theorem}[3-majority reaches consensus in $O(\log n)$ rounds w.h.p.]
+  \label{mj:main}
+  \rocq{Dynamics.majority.main.majority3_consensus_whp}
+  \rocqok
+  \uses{mj:mainfailclean, mj:sat2b2c, mj:T2a}
+  Let $n$ be such that $\log n \ge 30$ (in particular $n \ge 2$), let
+  $I_0 \subseteq V$ with $|I_0| \ge \tfrac35 n$, and set
+  \[
+    T \;=\; 10 + (T_{2a}(n) + 2), \qquad T_{2a}(n) = \lceil 6\log n \rceil.
+  \]
+  Then $\mathbb{P}[\, I_T = V \,] \;\ge\; 1 - \dfrac{500}{n}$, i.e.
+  \[
+    1 - \frac{500}{n} \;\le\;
+    \mathrm{expList}\ T\ \bigl(s \mapsto [\mathrm{run}\ I_0\ s = V]\bigr).
+  \]
+\end{theorem}
+\begin{proof}
+  \rocqok
+  The indicators of $I_T = V$ and of $1 \le n - |I_T|$ sum to $1$
+  (\texttt{neq\_setT\_dissent}, Lemma~\ref{mj:sat2b2c}), so
+  $\mathbb{P}[I_T=V] = 1-\mathbb{P}[I_T\ne V] \ge 1-500/n$ by
+  Theorem~\ref{mj:mainfailclean}.
+\end{proof}
+
+\noindent\textbf{Remark.}
+  As in the push protocol's write-up, the threshold $\log n \ge 30$ and
+  the constant $500$ are deliberately crude: the proof is organized to keep
+  every inequality an easy direct computation, not to be sharp. Reaching
+  this modest, two-digit threshold on $\log n$ (rather than an
+  astronomically large one) relies on two ingredients of
+  Section~\ref{pr:sec:ineq}: high-degree instances of the generic
+  exponential-vs-power bound (Lemma~\ref{pr:exppow}), and a log-log bound
+  tangent at a reference point near the threshold itself rather than at the
+  fixed point $e$ (Lemma~\ref{pr:loglog}). It is known
+  (Doerr--Goldberg--Minder--Sauerwald--Scheideler \cite{DGMSS11};
+  Becchetti--Clementi--Natale--Pasquale--Silvestri \cite{BCNPS15}) that an
+  initial imbalance of only $\Theta(\sqrt{n\log n})$ already suffices for
+  $O(\log n)$-round consensus w.h.p.; reaching that sharp threshold
+  requires tracking the process on the scale of its own standard deviation
+  throughout, a substantially more delicate multi-scale argument. Here a
+  constant-fraction initial imbalance keeps every step to a single,
+  reusable Chernoff bound (Section~\ref{pr:sec:chernoff}) applied at a
+  handful of explicit parameters.
+
+The proof has two phases, as in the push protocol, but for a structurally
+different reason: \textbf{growth} (Section~\ref{mj:sec:growth}), where the
+opinion-$1$ fraction self-amplifies from $60\%$ to $75\%$; and
+\textbf{saturation} (Section~\ref{mj:sec:saturation}), where the last
+dissenting agents are eliminated in three stages. Because the process is
+not monotone in the round index, \emph{both} phases need the Chernoff bound
+of Section~\ref{pr:sec:chernoff} --- unlike the push protocol, where only
+saturation needed a (much weaker) expectation argument.
+
+\section{The majority map}\label{mj:sec:map}
+
+Write $x = X_t/n \in [0,1]$ for the opinion-$1$ fraction, and
+$\mathrm{ind}(I)$ for the real-valued membership indicator of $I$, so
+$\mathrm{avg}(\mathrm{ind}(I)) = |I|/n$.
+
+\begin{lemma}[Majority-of-three as a polynomial]\label{mj:majpoly}
+  \rocq{Dynamics.majority.oneround.ind, Dynamics.majority.oneround.ind01,
+    Dynamics.majority.oneround.avg_ind, Dynamics.majority.oneround.avg_indE,
+    Dynamics.majority.oneround.majorityIndicatorE}
+  \rocqok
+  \uses{pr:avg, pr:avg-basic, mj:step}
+  For $a,b,c \in \{0,1\}$: $\mathbf 1[a+b+c\ge2] = ab+bc+ac-2abc$. Applied
+  pointwise to the three samples of a fixed agent, this expresses the
+  majority indicator $[\,2 \le \mathrm{sampleCountOf}\ I\ t\,]$ as a
+  polynomial in the three membership indicators
+  $\mathrm{ind}\ I\ t.1$, $\mathrm{ind}\ I\ t.2.1$, $\mathrm{ind}\ I\ t.2.2$
+  (\texttt{majorityIndicatorE}). Also: $\mathrm{ind}\ I\ x \in \{0,1\}$
+  (\texttt{ind01}) and $\mathrm{avg}(\mathrm{ind}\ I) = |I|/n$
+  (\texttt{avg\_ind}, \texttt{avg\_indE}).
+\end{lemma}
+\begin{proof}
+  \rocqok
+  Case analysis on the three booleans, then \texttt{lra}; the average of
+  the indicator is \texttt{avg\_ind} of Lemma~\ref{pr:avg-basic} with
+  $\#|'I_n| = n$.
+\end{proof}
+
+\begin{definition}[Per-agent contribution]\label{mj:Ymaj}
+  \rocq{Dynamics.majority.oneround.Y_maj, Dynamics.majority.oneround.Y_maj01,
+    Dynamics.majority.oneround.card_step_eq_sum}
+  \rocqok
+  \uses{mj:majpoly}
+  $Y_{\mathrm{maj}}(I,v,t) \in \{0,1\}$ is $1$ iff a majority of the sample
+  triple $t$ lies in $I$ (independent of $v$, kept as a function of $v$ to
+  match the shape the Chernoff bound of Section~\ref{pr:sec:chernoff}
+  expects). Then $|\mathrm{step}(I,r)| = \sum_v Y_{\mathrm{maj}}(I,v,r(v))$
+  (\texttt{card\_step\_eq\_sum}): the per-agent, $\{0,1\}$-valued
+  decomposition that Section~\ref{pr:sec:chernoff}'s tail bounds need.
+\end{definition}
+
+\begin{lemma}[Exact one-round drift]\label{mj:drift}
+  \rocq{Dynamics.majority.oneround.avg_ind_mul_fst_snd1,
+    Dynamics.majority.oneround.avg_ind_mul_snd1_snd2,
+    Dynamics.majority.oneround.avg_ind_mul_fst_snd2,
+    Dynamics.majority.oneround.avg_ind_mul_triple,
+    Dynamics.majority.oneround.avg_Y_majE,
+    Dynamics.majority.oneround.sum_avg_Y_maj,
+    Dynamics.majority.oneround.avg_card_step}
+  \rocqok
+  \uses{mj:Ymaj, pr:indep}
+  Conditionally on a fixed $I$ with $|I|=m$, the next count
+  $X_{t+1} = |\mathrm{step}(I,r)|$ satisfies
+  \[
+    \mathbb{E}_r[X_{t+1}] \;=\; n\,p(x), \qquad p(x) := 3x^2-2x^3, \qquad x = m/n,
+  \]
+  proved exactly (no approximation) via Lemma~\ref{mj:majpoly},
+  Definition~\ref{mj:Ymaj} and the independence toolkit of
+  Lemma~\ref{pr:indep} (each pairwise/triple product of membership
+  indicators over distinct coordinates of a sample triple factors by
+  \texttt{avg\_mul\_prod}, with the marginals \texttt{avg\_fst} /
+  \texttt{avg\_snd}). In Rocq the right-hand side is written
+  $n\,(3\,\mathrm{avg}(\mathrm{ind}\ I)^2 - 2\,\mathrm{avg}(\mathrm{ind}\ I)^3)$
+  and $\mathbb{E}_r$ is the average over $r \in \texttt{Tgt3}\ n$; the
+  one-agent mean is \texttt{avg\_Y\_majE} and the sum over agents is
+  \texttt{sum\_avg\_Y\_maj}.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  Expand $Y_{\mathrm{maj}}$ with \texttt{majorityIndicatorE}, apply
+  \texttt{avgD}/\texttt{avgB}/\texttt{avgZ} and the four product lemmas,
+  then \texttt{ring}. For the full round, $|\mathrm{step}(I,r)|
+  = \sum_v Y_{\mathrm{maj}}(I,v,r(v))$ and each summand has the same
+  marginal by \texttt{avg\_eval} (Lemma~\ref{pr:indep}), since the sample
+  space $\texttt{Tgt3}\ n$ is a product of $n$ nonempty copies of
+  $'I_n \times ('I_n \times 'I_n)$.
+\end{proof}
+
+\begin{definition}[Dissent contribution]\label{mj:Ydis}
+  \rocq{Dynamics.majority.oneround.Y_dis, Dynamics.majority.oneround.Y_dis01,
+    Dynamics.majority.oneround.card_dissent_eq_sum,
+    Dynamics.majority.oneround.sum_avg_Y_dis}
+  \rocqok
+  \uses{mj:Ymaj, mj:drift}
+  $Y_{\mathrm{dis}} := 1 - Y_{\mathrm{maj}}$, the complementary per-agent
+  dissent contribution, so $n - |\mathrm{step}(I,r)| = \sum_v
+  Y_{\mathrm{dis}}(I,v,r(v))$ with mean $n - n\,p(x)$
+  (\texttt{sum\_avg\_Y\_dis}); by the algebraic identity
+  $1-p(x) = (1-x)^2(1+2x)$ this is the quantity controlled in
+  Section~\ref{mj:sec:saturation}.
+\end{definition}
+
+\noindent\textbf{Remark.}
+  The algebraic identities for $p$ used throughout below --- $p(x)-x =
+  x(1-x)(2x-1)$, $1-p(x) = (1-x)^2(1+2x)$, and the growth/saturation
+  regional bounds $p(\tfrac12+\beta)-\tfrac12 \ge \tfrac54\beta$ for
+  $0\le\beta\le\tfrac14$ and $u(3-2u)\le\tfrac58$ for $0\le u\le\tfrac14$ ---
+  are not isolated as separate lemmas: each use site
+  (\texttt{growth\_round}, \texttt{saturation\_round\_closed},
+  \texttt{saturation\_mean\_quad}) re-derives the specific polynomial
+  inequality it needs inline via \texttt{ring}/\texttt{nra}, in the
+  same spirit as the push protocol's reverse-Markov bound, which is also
+  not isolated as its own named lemma.
+
+\section{Growth phase}\label{mj:sec:growth}
+
+Set $\beta_j = \tfrac1{10}(1.1)^j$ for $j=0,\dots,10$; $\beta_0=0.1$ (the
+hypothesis $X_0\ge0.6n$) and $\beta_{10}>0.25$.
+
+\begin{definition}[Bias schedule]\label{mj:growthbias}
+  \rocq{Dynamics.majority.growth.growthBias,
+    Dynamics.majority.growth.growthBias0,
+    Dynamics.majority.growth.growthBias_ge0,
+    Dynamics.majority.growth.growthBias_leS,
+    Dynamics.majority.growth.growthBias_le,
+    Dynamics.majority.growth.growthBias_le_quarter,
+    Dynamics.majority.growth.growthBias10}
+  \rocqok
+  $\mathrm{growthBias}(j) := \tfrac1{10}(\tfrac{11}{10})^j$, the deterministic
+  bias target after $j$ growth rounds; nonnegative, monotone
+  (\texttt{growthBias\_leS}, \texttt{growthBias\_le}), equal to
+  $\tfrac1{10}$ at $j = 0$, $\le\tfrac14$ for $j\le9$
+  (\texttt{growthBias\_le\_quarter}), and $>\tfrac14$ at $j=10$
+  (\texttt{growthBias10}).
+\end{definition}
+
+\begin{lemma}[Single growth round]\label{mj:growthround}
+  \rocq{Dynamics.majority.growth.growth_round}
+  \rocqok
+  \uses{mj:drift, pr:chernofflog, mj:growthbias, pr:logquad}
+  Starting from opinion-$1$ fraction $\ge\tfrac12+\beta$
+  ($\tfrac1{10}\le\beta\le\tfrac14$), the probability of \emph{failing} to
+  reach the next bias target (guaranteed growth factor $\tfrac{11}{10}$,
+  comfortably below the true drift factor $\tfrac54$ from
+  Lemma~\ref{mj:drift}) is at most $\exp(-n/10^7)$:
+  \[
+    \mathbb{P}_r\bigl[\, |\mathrm{step}(I,r)| \le n(\tfrac12 + \tfrac{11}{10}\beta) \,\bigr]
+    \;\le\; \exp(-n/10^7).
+  \]
+\end{lemma}
+\begin{proof}
+  \rocqok
+  Compute a lower bound $\mu_{\mathrm{lb}} = n(\tfrac12+\tfrac54\beta)$ on
+  the true mean via monotonicity of $p$ on $[\tfrac12+\beta,1]$ (an inline
+  \texttt{nra}/\texttt{lra} computation, not a separate lemma), then apply
+  the lower-tail bound \texttt{avg\_tail\_le\_ln\_ge}
+  (Lemma~\ref{pr:chernofflog}) to the decomposition of
+  Definition~\ref{mj:Ymaj} at $k=n(\tfrac12+\tfrac{11}{10}\beta)$, and bound
+  the resulting exponent using Lemma~\ref{pr:logquad}: with
+  $d := 1 - k/\mu_{\mathrm{lb}} \ge 1/55$ the exponent is exactly
+  $-n\,c\,d^3$ with $c = \tfrac12 + \tfrac54\beta \ge \tfrac58$, and
+  $\tfrac58 \cdot 55^{-3} \ge 10^{-7}$.
+\end{proof}
+
+\begin{lemma}[Union bound over growth rounds]\label{mj:growthfail}
+  \rocq{Dynamics.majority.growth.growth_fail_le}
+  \rocqok
+  \uses{mj:growthround, pr:expList-basic}
+  Starting from bias $\mathrm{growthBias}(i)$, after $j$ further rounds
+  (with $i+j\le10$) the probability of failing to reach
+  $\mathrm{growthBias}(i+j)$ is at most $j\exp(-n/10^7)$. In Rocq the
+  failure indicator is written
+  $[\,(n(\tfrac12 + \mathrm{growthBias}(i+j)) \le |\mathrm{run}\ I\ s|) = \mathrm{false}\,]$.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  Induction on $j$ via the $\mathrm{expList}$-conditioning idiom (mirroring
+  the push protocol's Lemma~\ref{rs:gluing}): conditioning on the first
+  round $r$, either it reaches the next threshold and the induction
+  hypothesis applies to $\mathrm{step}(I,r)$, or the failure indicator of
+  the first round is $1$; so the inner expectation is at most
+  $[\text{first round fails}] + j\exp(-n/10^7)$, and Lemma~\ref{mj:growthround}
+  bounds the average of the first term.
+\end{proof}
+
+\begin{lemma}[Phase 1]\label{mj:phase1}
+  \rocq{Dynamics.majority.growth.growth_phase1}
+  \rocqok
+  \uses{mj:growthfail}
+  Starting from opinion-$1$ fraction $\ge\tfrac35$, after $10$ rounds the
+  opinion-$1$ fraction is at least $\tfrac34$, except with probability
+  $\le10\exp(-n/10^7)$.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  Lemma~\ref{mj:growthfail} with $i = 0$, $j = 10$, using
+  $\mathrm{growthBias}(0) = \tfrac1{10}$ and
+  $\mathrm{growthBias}(10) > \tfrac14$ (Definition~\ref{mj:growthbias}) to
+  compare the two failure indicators pointwise.
+\end{proof}
+
+\section{Saturation phase}\label{mj:sec:saturation}
+
+Write $U_t = n-X_t$. By Lemma~\ref{mj:phase1}, $U_{10}\le n/4$ except with
+probability $\le10\exp(-n/10^7)$. Getting $U_t$ all the way to
+\emph{exactly} $0$ needs three stages, since a fixed-ratio Chernoff bound
+needs the mean itself to be $\Omega(\log n)$ for a polynomially-small
+per-round failure probability.
+
+\begin{lemma}[Pad\'e-type bound for the exponential]\label{mj:pade-exp}
+  \rocq{Dynamics.majority.saturation.expR_pade}
+  \rocqok
+  For $t \ge 0$: $2(e^t - 1) \le t\,(e^t + 1)$.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  The function $g(s) = s(e^s+1) - 2(e^s-1)$ vanishes at $0$ and has
+  derivative $g'(s) = 1 + (s-1)e^s \ge 0$, which is $1 + x \le e^x$ at
+  $x = -s$ (\texttt{expR\_ge1Dx}); conclude by the mean value theorem
+  (\texttt{MVT\_segment} of MathComp-Analysis, with \texttt{is\_derive}
+  for $g'$).
+\end{proof}
+
+\begin{lemma}[Pad\'e lower bound on the logarithm]\label{mj:pade-ln}
+  \rocq{Dynamics.majority.saturation.ln_ge_pade}
+  \rocqok
+  \uses{mj:pade-exp}
+  For $x \ge 1$: $2(x - 1) \le (x + 1)\log x$, i.e.\
+  $\log x \ge \dfrac{2(x-1)}{x+1}$.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  Lemma~\ref{mj:pade-exp} at $t = \log x \ge 0$, with $e^{\log x} = x$.
+\end{proof}
+
+\noindent\textbf{Remark (Rocq).} This is Mathlib's
+\texttt{Real.le\_log\_one\_add\_of\_nonneg} ($2y/(y+2) \le \log(1+y)$ for
+$y \ge 0$), multiplied out. MathComp-Analysis has no counterpart, and it is
+the one place where the \emph{upper} tail needs a cubically tight bound on
+$\log$; it is also the only calculus (a derivative and the mean value
+theorem) in the whole development.
+
+\begin{lemma}[General per-round upper-tail bound]\label{mj:satclosed}
+  \rocq{Dynamics.majority.saturation.saturation_round_closed,
+    Dynamics.majority.saturation.saturation_round_generic}
+  \rocqok
+  \uses{mj:Ydis, pr:chernofflog}
+  Given a reference dissent bound $U_t\le M\le n/4$ and any target
+  $k\ge\tfrac58M$ (an upper bound $\mu_{\mathrm{ub}}=\tfrac58M$ on the true
+  one-round mean, via $1-p(x)=(1-x)^2(1+2x)\le\tfrac58(1-x)$ for
+  $x\ge\tfrac34$), the probability the next dissent count is at least $k$ is
+  at most $\exp(k-\tfrac58M-k\log(k/(\tfrac58M)))$
+  (\texttt{saturation\_round\_closed}); the same conclusion holds for any
+  directly-supplied upper bound $\mu_{\mathrm{ub}}$ on the true mean
+  (\texttt{saturation\_round\_generic}, used by Stage 2b where the
+  quadratic estimate below is the tight one).
+\end{lemma}
+\begin{proof}
+  \rocqok
+  \texttt{avg\_tail\_ge\_ln\_le} (Lemma~\ref{pr:chernofflog}) applied to the
+  dissent decomposition $n - |\mathrm{step}(I,r)| = \sum_v
+  Y_{\mathrm{dis}}(I,v,r(v))$ of Definition~\ref{mj:Ydis}; for the closed
+  form, the mean $n - n p(x) = n(1-x)\cdot(1-x)(1+2x)$ is at most
+  $\tfrac58 M$ since $(1-x)(1+2x) \le \tfrac58$ on $[\tfrac34, 1]$
+  (\texttt{nra}).
+\end{proof}
+
+\begin{lemma}[Quadratic mean bound]\label{mj:satquad}
+  \rocq{Dynamics.majority.saturation.saturation_mean_quad}
+  \rocqok
+  \uses{mj:Ydis}
+  For any dissent bound $U_t\le M\le n$, the true one-round mean is at most
+  $3M^2/n$ (the crude bound $1-p(x)\le3(1-x)^2$, dropping the $\tfrac58$
+  refinement). Used both by Stage 2b and by Stage 2c (at $M=10$).
+\end{lemma}
+\begin{proof}
+  \rocqok
+  With $U := n(1-x) \le M$: $n\,(n - np(x)) = U^2(1+2x) \le 3U^2 \le 3M^2$.
+\end{proof}
+
+\begin{lemma}[Numeric per-round bound]\label{mj:satnumeric}
+  \rocq{Dynamics.majority.saturation.saturation_round_numeric}
+  \rocqok
+  \uses{mj:satclosed, mj:pade-ln}
+  Lemma~\ref{mj:satclosed}'s exponent, simplified via the Pad\'e bound
+  of Lemma~\ref{mj:pade-ln} to the closed form
+  $-\lambda^2/(k+\tfrac58M)$, $\lambda=k-\tfrac58M$: for $0 < M \le n/4$,
+  $k \ge \tfrac58 M$, $k > 0$ and $U_t \le M$,
+  \[
+    \mathbb{P}_r\bigl[\, n - |\mathrm{step}(I,r)| \ge k \,\bigr]
+    \;\le\; \exp\Bigl(-\frac{(k - \tfrac58 M)^2}{k + \tfrac58 M}\Bigr).
+  \]
+\end{lemma}
+\begin{proof}
+  \rocqok
+  With $m = \tfrac58 M$: Lemma~\ref{mj:pade-ln} at $x = k/m \ge 1$ gives
+  $2(k - m) \le (k + m)\log(k/m)$, hence
+  $k - m - k\log(k/m) \le -(k-m)^2/(k+m)$ (\texttt{lra} after clearing the
+  denominator).
+\end{proof}
+
+\noindent\textbf{Remark (Rocq).} The Lean blueprint tags this lemma with the
+quadratic bound \texttt{log\_ge\_quadratic}, but the Lean proof (like the
+Rocq one) actually goes through the Pad\'e bound; the dependency graph here
+records the Pad\'e bound.
+
+\begin{lemma}[Stage 2a per-round contraction]\label{mj:satcontract}
+  \rocq{Dynamics.majority.saturation.saturation_round_contract}
+  \rocqok
+  \uses{mj:satnumeric}
+  Guaranteed contraction factor $0.7$ (vs.\ the true $\tfrac58$): for
+  $0 < M \le n/4$ and $U_t \le M$,
+  $\mathbb{P}_r[\, n - |\mathrm{step}(I,r)| \ge \tfrac{7}{10} M \,] \le \exp(-M/250)$.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  Lemma~\ref{mj:satnumeric} at $k = \tfrac7{10}M$:
+  $(\tfrac{7}{10} - \tfrac58)^2 / (\tfrac7{10} + \tfrac58) = \tfrac{(3/40)^2}{53/40}
+  = \tfrac{9}{2120} \ge \tfrac{1}{250}$.
+\end{proof}
+
+\begin{definition}[Deterministic dissent target]\label{mj:satafter}
+  \rocq{Dynamics.majority.saturation.satAfter,
+    Dynamics.majority.saturation.satAfter_ge_floor,
+    Dynamics.majority.saturation.satAfter0,
+    Dynamics.majority.saturation.satAfter_le,
+    Dynamics.majority.saturation.satAfter_contract_le}
+  \rocqok
+  $\mathrm{satAfter}(n,M,i) := \max(500\log n,\ (0.7)^i M)$, the target
+  dissent bound after $i$ Stage 2a rounds, clamped below at the floor
+  $500\log n$; written in closed form (not recursively) so shifts by one
+  round agree definitionally on the unclamped branch. It is at least the
+  floor (\texttt{satAfter\_ge\_floor}), equals $M$ at $i = 0$ when
+  $M \ge 500\log n$ (\texttt{satAfter0}), stays $\le n/4$ when
+  $M \le n/4$ and $500\log n \le n/4$ (\texttt{satAfter\_le}), and
+  $\tfrac{7}{10}\,\mathrm{satAfter}(n,M,i) \le \mathrm{satAfter}(n,M,i+1)$
+  (\texttt{satAfter\_contract\_le}).
+\end{definition}
+
+\begin{lemma}[Stage 2a, union bound]\label{mj:satfail}
+  \rocq{Dynamics.majority.saturation.saturation_fail_le}
+  \rocqok
+  \uses{mj:satcontract, mj:satafter, pr:expList-basic}
+  Starting from a dissent bound $M$ ($500\log n\le M\le n/4$, with
+  $500 \log n \le n/4$ and $n \ge 2$), offset $i$
+  rounds in, the probability the dissent count exceeds
+  $\mathrm{satAfter}(n,M,i+j)$ after $j$ further rounds is at most
+  $j\,\exp(-2\log n) = j\,n^{-2}$.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  Induction on $j$ via the same $\mathrm{expList}$-conditioning idiom as
+  Lemma~\ref{mj:growthfail}, with the tail direction flipped (dissent
+  shrinking rather than opinion-$1$ count growing): if the first round
+  already contracted the dissent below $\tfrac7{10}\mathrm{satAfter}(n,M,i)
+  \le \mathrm{satAfter}(n,M,i+1)$ the induction hypothesis applies to
+  $\mathrm{step}(I,r)$; otherwise the first-round failure indicator is $1$,
+  and Lemma~\ref{mj:satcontract} bounds its probability by
+  $\exp(-\mathrm{satAfter}(n,M,i)/250) \le \exp(-2\log n)$ since
+  $\mathrm{satAfter} \ge 500 \log n$.
+\end{proof}
+
+\begin{definition}[Length of Stage 2a]\label{mj:T2a}
+  \rocq{Dynamics.majority.saturation.T2a}
+  \rocqok
+  $T_{2a}(n) := \lceil 6\log n \rceil$ (\texttt{ceiln}). In Rocq the
+  \texttt{nat}-valued \texttt{T2a} depends on the real type $R$ only through
+  $\log$, so $R$ is an explicit argument: \texttt{T2a n R}.
+\end{definition}
+
+\begin{lemma}[Stage 2a, wrapped]\label{mj:stage2a}
+  \rocq{Dynamics.majority.saturation.satAfter_quarter_le_floor,
+    Dynamics.majority.saturation.saturation_stage2a}
+  \rocqok
+  \uses{mj:satfail, mj:T2a, mj:satafter, pr:logbounds}
+  Starting from any dissent bound $\le n/4$ (with $n \ge 2$ and
+  $500 \log n \le n/4$), after $T_{2a}(n)$ rounds the dissent count exceeds
+  the floor $500\log n$ with probability at most
+  $T_{2a}(n)\cdot \exp(-2\log n) = T_{2a}(n)\, n^{-2}$.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  Lemma~\ref{mj:satfail} with $M = n/4$, $i = 0$, $j = T_{2a}(n)$, together
+  with $\mathrm{satAfter}(n, n/4, T_{2a}(n)) \le 500\log n$
+  (\texttt{satAfter\_quarter\_le\_floor}): $(7/10)^{T_{2a}} n/4 \le
+  e^{-\log n}\, n / 4 \le 500 \log n$ because $\log(7/10) \le -3/10$
+  (\texttt{le\_ln1Dx}) and $\log n \ge \log 2 \ge 1/2$
+  (Lemma~\ref{pr:logbounds}).
+\end{proof}
+
+\begin{lemma}[Stage 2b]\label{mj:stage2b}
+  \rocq{Dynamics.majority.saturation.saturation_stage2b}
+  \rocqok
+  \uses{mj:satquad, mj:satclosed, pr:exppow, pr:loglog, pr:lnge30}
+  Provided $\log n\ge30$: whenever $U_t\le500\log n$,
+  $\mathbb{P}[U_{t+1}\ge10] \le \exp(-\log n) = 1/n$. One round, jumping from
+  the $\Theta(\log n)$ floor directly to the fixed constant $10$: since the
+  mean is already tiny ($\Theta((\log n)^2/n)$), this single round has an
+  astronomically small failure probability once $n$ is large enough to beat
+  the relevant polynomial in $\log n$, which a degree-$11$ instance of
+  Lemma~\ref{pr:exppow}, combined with the tighter tangent-line bound of
+  Lemma~\ref{pr:loglog}, already secures at this modest threshold.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  Let $L = \log n$. Lemma~\ref{mj:satquad} gives the mean bound
+  $\mu_{\mathrm{ub}} = 3(500L)^2/n \le 9$ (using $n = e^L \ge L^{11}/11!$,
+  Lemma~\ref{pr:exppow}, and $L \ge 30$), so
+  \texttt{saturation\_round\_generic} (Lemma~\ref{mj:satclosed}) at $k = 10$
+  applies. In the exponent, $75000\,L^2 \le 10\,L^6$ (as $L^4 \ge 30^4$), so
+  $\log(10/\mu_{\mathrm{ub}}) \ge \log(n/L^6) = L - 6\log L$, and
+  Lemma~\ref{pr:loglog} bounds $6 \log L \le 12 + 0.3 L$; then
+  $10 - \mu_{\mathrm{ub}} - 10\log(10/\mu_{\mathrm{ub}}) \le -L$ follows by
+  \texttt{lra}.
+\end{proof}
+
+\noindent\textbf{Remark (Rocq).} Lean bounds the exponent through
+$\log 75000$; the Rocq proof avoids the literal $75000$ (which
+\texttt{lra} would expand in unary) via $75000\,L^2 \le L^6$.
+
+\begin{lemma}[Stage 2c]\label{mj:stage2c}
+  \rocq{Dynamics.majority.saturation.saturation_stage2c}
+  \rocqok
+  \uses{mj:satquad, pr:markov, pr:indep}
+  Whenever $U_t\le10$: $\mathbb{P}[U_{t+1}\ge1] \le 300/n$, via ordinary
+  Markov applied to the nonnegative-integer $U_{t+1}$
+  ($\mathbb{E}[U_{t+1}]\le300/n$ by Lemma~\ref{mj:satquad} at $M=10$) --- no
+  concentration needed for the very last step.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  Pointwise $[1 \le U_{t+1}] \le U_{t+1}$ since $U_{t+1} \in \mathbb{N}$;
+  then $\mathbb{E}[U_{t+1}] = \sum_v \mathrm{avg}(Y_{\mathrm{dis}}(I,v))$ by
+  \texttt{card\_dissent\_eq\_sum} and \texttt{avg\_eval}
+  (Lemma~\ref{pr:indep}), which is $\le 3\cdot 10^2/n$.
+\end{proof}
+
+\section{Proof of the main theorem}\label{mj:sec:proof-main}
+
+\begin{lemma}[The floor is below $n/4$]\label{mj:floor4}
+  \rocq{Dynamics.majority.main.floor4_of_big}
+  \rocqok
+  \uses{pr:exppow, pr:lnge30}
+  If $\log n \ge 30$ then $500 \log n \le n/4$.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  With $L = \log n$: $n = e^L \ge L^5/5! = L^4 \cdot L/120 \ge
+  30^4 L / 120 \ge 2000 L$ (Lemma~\ref{pr:exppow} with $k = 5$). This is
+  Lean's \texttt{hfloor4\_of\_hbig}; in Rocq it is a standalone lemma since
+  Lemma~\ref{mj:sat2a2b2c} needs it too.
+\end{proof}
+
+\begin{lemma}[Stages 2b+2c combined]\label{mj:sat2b2c}
+  \rocq{Dynamics.majority.main.neq_setT_dissent,
+    Dynamics.majority.main.saturation_2b2c}
+  \rocqok
+  \uses{mj:stage2b, mj:stage2c, pr:lnge30, pr:expList-basic}
+  Two rounds, from $U_t\le500\log n$ to \emph{exactly} $U=0$, with total
+  failure probability $\le\exp(-\log n)+300/n$, by chaining
+  Lemma~\ref{mj:stage2b} then Lemma~\ref{mj:stage2c} via
+  $\mathrm{expList}$-conditioning. Also records
+  $I \ne V \iff 1 \le n - |I|$ (\texttt{neq\_setT\_dissent}, Lean's
+  \texttt{ne\_univ\_iff\_pos\_dissent}), the bridge between ``no consensus''
+  and ``positive dissent'' used by Theorem~\ref{mj:main}.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  Condition on the first round $r_1$: if $U(\mathrm{step}(I,r_1)) \ge 10$
+  bound the second-round expectation by $1$, otherwise by $300/n$
+  (Lemma~\ref{mj:stage2c}); so the inner expectation is at most
+  $[\,10 \le U(\mathrm{step}(I, r_1))\,] + 300/n$, and
+  Lemma~\ref{mj:stage2b} bounds the average of the indicator by
+  $\exp(-\log n)$. Nonemptiness of the sample space comes from
+  Lemma~\ref{pr:lnge30}.
+\end{proof}
+
+\begin{lemma}[All three saturation stages combined]\label{mj:sat2a2b2c}
+  \rocq{Dynamics.majority.main.saturation_2a2b2c}
+  \rocqok
+  \uses{mj:stage2a, mj:sat2b2c, mj:floor4, mj:T2a, pr:expList-basic}
+  For $\log n \ge 30$: $T_{2a}(n)+2$ rounds, from $U_t\le n/4$ to exactly
+  $U=0$, with total failure probability
+  $\le T_{2a}(n)\cdot \exp(-2\log n) + \exp(-\log n) + 300/n$.
+\end{lemma}
+\begin{proof}
+  \rocqok
+  Split the horizon with \texttt{expList\_cat}. For a fixed prefix $s_1$ of
+  length $T_{2a}(n)$: if $500\log n < U(\mathrm{run}\ I_0\ s_1)$ bound the
+  inner two-round expectation by $1$, otherwise by Lemma~\ref{mj:sat2b2c};
+  then Lemma~\ref{mj:stage2a} (whose hypothesis $500\log n \le n/4$ is
+  Lemma~\ref{mj:floor4}) bounds the outer expectation of the indicator.
+\end{proof}
+
+\begin{theorem}[Main failure bound, raw form]\label{mj:mainfail}
+  \rocq{Dynamics.majority.main.majority3_consensus_fail_le}
+  \rocqok
+  \uses{mj:phase1, mj:sat2a2b2c, mj:T2a, pr:expList-basic}
+  For $\log n\ge30$ and $|I_0|\ge\tfrac35n$: over $10+(T_{2a}(n)+2)$
+  rounds,
+  \[
+    \mathbb{P}[I_T\ne V] \;\le\; 10e^{-n/10^7}
+      + \bigl(T_{2a}(n)\,e^{-2\log n} + e^{-\log n} + 300/n\bigr),
+  \]
+  where $\mathbb{P}[I_T \ne V] = \mathrm{expList}\ T\ (s \mapsto
+  [\,1 \le n - |\mathrm{run}\ I_0\ s|\,])$.
+\end{theorem}
+\begin{proof}
+  \rocqok
+  Glue Lemma~\ref{mj:phase1} (growth) to Lemma~\ref{mj:sat2a2b2c}
+  (saturation) with \texttt{expList\_cat}, exactly as the push protocol's
+  Lemma~\ref{rs:gluing} glues its own two phases: for a fixed
+  $10$-round prefix $s_1$, either $|\mathrm{run}\ I_0\ s_1| \ge \tfrac34 n$
+  and Lemma~\ref{mj:sat2a2b2c} applies (the dissent is $\le n/4$), or the
+  growth-failure indicator is $1$.
+\end{proof}
+
+\begin{theorem}[Clean numeric bound]\label{mj:mainfailclean}
+  \rocq{Dynamics.majority.main.majority3_consensus_fail_le_clean}
+  \rocqok
+  \uses{mj:mainfail, pr:exppow, mj:floor4, pr:lnge30}
+  Under the same hypotheses, the four error terms of
+  Theorem~\ref{mj:mainfail} are each bounded by $O(1/n)$ using
+  Lemma~\ref{pr:exppow} (to show $n$ dominates the relevant polynomials in
+  $\log n$ once $\log n\ge30$), giving the single clean bound
+  $\mathbb{P}[I_T\ne V] \le 500/n$.
+\end{theorem}
+\begin{proof}
+  \rocqok
+  Let $L = \log n \ge 30$. First $n = e^L \ge L^{14}/14! \ge 30^{14}/14!
+  \ge 5\cdot 10^9$ (Lemma~\ref{pr:exppow}, $k = 14$). Term 1: with
+  $x = n/10^7 \ge 500$, $e^x \ge x^5/5! \ge 500^4 x / 120 \ge 10^7 x \cdot 10
+  = 10 n$ ($k = 5$), so $10 e^{-x} \le 1/n$. Term 2:
+  $T_{2a}(n) \le 6L + 1 \le n$ (the ceiling bracket \texttt{ceilB1\_lt}
+  inline), so $T_{2a}(n)\, e^{-2L} = T_{2a}(n)/n^2 \le 1/n$. Term 3:
+  $e^{-L} = 1/n$. Term 4 is $300/n$. Total $\le 303/n \le 500/n$.
+\end{proof}
+
+\noindent\textbf{Remark (Rocq).} Lean's proof uses the degree-$11$ instance
+$n \ge L^{11}/11!$; the Rocq proof uses degree $14$ (to get
+$n \ge 5\cdot 10^9$) and degree $5$ (for the term $10 e^{-n/10^7}$) instead,
+because \texttt{lra} handles the literal $11!$ poorly. The constant $500$ is
+unchanged.
+
+With $T = 10+(T_{2a}(n)+2)$, Theorem~\ref{mj:main}
+(\texttt{majority3\_consensus\_whp}) follows from
+Theorem~\ref{mj:mainfailclean} by
+$\mathbb{P}[I_T=V] = 1-\mathbb{P}[I_T\ne V] \ge 1-500/n$.
+
+\section*{The Rocq formalization}
+
+Both arguments above are fully formalized (no \texttt{Admitted}) in the
+\texttt{rocq-dynamics} repository (Rocq 9.1, MathComp 2.5,
+MathComp-Analysis 1.16; logical root \texttt{Dynamics}). File structure
+(dependency order): \texttt{theories/prelude.v} (library imports and
+\texttt{ceiln}); \texttt{theories/prob/avg.v}
+(Section~\ref{pr:sec:avg}), \texttt{indep.v} (Section~\ref{pr:sec:indep}),
+\texttt{equivalence.v} (Theorem~\ref{pr:faithful}),
+\texttt{bounds.v} (Section~\ref{pr:sec:ineq}), \texttt{chernoff.v}
+(Section~\ref{pr:sec:chernoff});\texttt{theories/rumor/model.v}
+(Sections~\ref{rs:sec:model} and~\ref{rs:sec:adaptive}), \texttt{oneround.v}
+(Section~\ref{rs:sec:oneround}), \texttt{growth.v}
+(Sections~\ref{rs:sec:adaptive}--\ref{rs:sec:growth}),
+\texttt{saturation.v} (Section~\ref{rs:sec:saturation}), \texttt{main.v}
+(main theorem and numeric lemmas); \texttt{theories/majority/model.v}
+(Section~\ref{mj:sec:model}), \texttt{oneround.v} (Section~\ref{mj:sec:map}),
+\texttt{growth.v} (Section~\ref{mj:sec:growth}), \texttt{saturation.v}
+(Section~\ref{mj:sec:saturation}), \texttt{main.v}
+(Section~\ref{mj:sec:proof-main} and the main theorem). Design constraints
+preserved from the Lean developments: no measure theory, no
+\texttt{probability} structures of MathComp-Analysis --- everything is finite
+sums, plus \texttt{expR}/\texttt{ln} where the Chernoff bound genuinely
+needs them, and a single mean value theorem for the Pad\'e bound of
+Lemma~\ref{mj:pade-exp}.
+
+\begin{thebibliography}{9}
+\bibitem{FG85} A.~Frieze, G.~Grimmett.
+\emph{The shortest-path problem for graphs with random arc-lengths}.
+Discrete Applied Mathematics 10 (1985) 57--77.
+\bibitem{Pittel87} B.~Pittel.
+\emph{On spreading a rumor}. SIAM J.\ Appl.\ Math.\ 47 (1987) 213--223.
+\bibitem{KSSV00} R.~Karp, C.~Schindelhauer, S.~Shenker, B.~V\"ocking.
+\emph{Randomized rumor spreading}. FOCS 2000.
+\bibitem{DGMSS11} B.~Doerr, L.A.~Goldberg, L.~Minder, T.~Sauerwald,
+C.~Scheideler. \emph{Stabilizing consensus with the power of two choices}.
+SPAA 2011.
+\bibitem{BCNPS15} L.~Becchetti, A.~Clementi, E.~Natale, F.~Pasquale,
+R.~Silvestri. \emph{Plurality consensus in the gossip model}. SODA 2015.
+\end{thebibliography}

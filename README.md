@@ -7,10 +7,12 @@ distributed processes, ported from the Lean 4 + Mathlib monorepo
 
 | Result | Lean main theorem | Rocq status |
 |---|---|---|
-| Uniform *push* rumor spreading on `K_n` informs all `n` nodes within `O(log n)` rounds w.h.p. | `RumorPush.push_informs_all_whp` | planned (see `docs/PLAN.md`) |
-| 3-majority dynamics reach consensus within `O(log n)` rounds with probability `1 - O(1/n)` from a `60%` majority | `ThreeMajority.majority3_consensus_whp` | planned |
+| Uniform *push* rumor spreading on `K_n` informs all `n` nodes within `O(log n)` rounds w.h.p. | `RumorPush.push_informs_all_whp` | **proved**: `Dynamics.rumor.main.push_informs_all_whp` |
+| 3-majority dynamics reach consensus within `O(log n)` rounds with probability `1 - O(1/n)` from a `60%` majority | `ThreeMajority.majority3_consensus_whp` | **proved**: `Dynamics.majority.main.majority3_consensus_whp` |
 
-Both developments sit on a minimal finite-probability layer (uniform averages over
+Both ports are complete and `Admitted`-free, with the same constants as the Lean
+statements; `verify.sh` checks that the main theorems depend only on the three
+classical axioms of mathcomp-classical (`boolp`). Both developments sit on a minimal finite-probability layer (uniform averages over
 finite types, no measure theory) plus a self-contained Chernoff bound; the Rocq port
 keeps that design (`docs/DESIGN.md`).
 
@@ -27,6 +29,22 @@ make gate        # layering check + build + no-Admitted check + axiom audit
 ./verify.sh      # clean rebuild + Print Assumptions of the headline theorems
 ```
 
+## Blueprint and documentation
+
+`blueprint/` is a [rocqblueprint](https://github.com/reiniscirpons/rocqblueprint) mirroring
+the two Lean blueprints statement for statement (`\rocq{}` tags instead of `\lean{}`);
+`.github/workflows/blueprint.yml` builds it (web + pdf) together with the coqdoc API
+documentation, checks that every cited declaration exists (`scripts/check_rocq_decls.py`)
+and assembles the site under `home_page/`. The assembled site is the `site` artifact of
+each run; deployment to GitHub Pages happens automatically once Pages is available for the
+repository (it requires the repository to be public on the current plan). Locally:
+
+```bash
+uv tool install rocqblueprint          # needs graphviz; xelatex + latexmk for the pdf
+cd blueprint/src && rocqblueprint web && rocqblueprint pdf && cd ../..
+python3 scripts/check_rocq_decls.py    # after `make`
+```
+
 ## Layout
 
 ```
@@ -34,7 +52,8 @@ theories/prelude.v        shared imports, options, smoke lemmas
 theories/prob/            finite uniform probability, real inequalities, Chernoff
 theories/rumor/           the push protocol                (parallel to majority/)
 theories/majority/        the 3-majority process           (parallel to rumor/)
-scripts/                  check_layers.py, check_admitted.py
+scripts/                  check_layers.py, check_admitted.py, check_rocq_decls.py
+blueprint/, home_page/    rocqblueprint sources and the Jekyll landing page
 docs/DESIGN.md            representation decisions, Lean -> Rocq dictionary
 docs/PLAN.md              milestones, file map, status table
 docs/study/               survey of the LLM4Rocq tooling and project conventions

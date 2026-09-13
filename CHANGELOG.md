@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+### M7 — blueprint and documentation site (2026-09-13)
+- `blueprint/` (rocqblueprint, 76 nodes mirroring both Lean blueprints, all proved),
+  `home_page/` (Jekyll), `scripts/check_rocq_decls.py` (the `checkdecls` analogue),
+  `.github/workflows/blueprint.yml` (web + pdf + coqdoc + declaration check, `site`
+  artifact; Pages deploy best-effort — Pages is unavailable while the repo is private).
+- `HANDOFF.md` for the next agent.
+
+### M8 — faithfulness audit and `Equivalence.lean` (2026-09-13)
+- `docs/LEAN_TO_ROCQ.md`: every Lean declaration of both projects (176) mapped to its
+  Rocq counterpart with the exact statement differences (representation changes only:
+  `Finset`→`{set _}`, `Fin n`→`'I_n`, `List`→`seq`, `if P then 1 else 0`→`(P)%:R`,
+  `Nat.ceil`→`ceiln`, `Nonempty`→`(0 < #|T|)%N`, Prop→bool); no hypothesis or constant
+  differs. Rocq-only helpers and proof-level deviations listed with justifications.
+- `theories/prob/equivalence.v`: `expList_eq_avg_tuple` — `expList k F` equals the uniform
+  average of `F` over the product space `k.-tuple T` (Lean `expList_eq_avg_ofFn`, with
+  `k.-tuple T`/`tval` for `Fin k → α`/`List.ofFn` and `cons_tuple` for `Fin.consEquiv`);
+  helpers `avg_pair` (Fubini for `avg`) and `cons_tuple_bij`. Only the three `boolp` axioms.
+
 ### M1–M6 — both formalizations complete (2026-09-12, branch prob-layer)
 - All 15 files Admitted-free; `verify.sh` audits `push_informs_all_whp`,
   `push_informs_all_whp'`, `majority3_consensus_whp`, `majority3_consensus_fail_le_clean`:

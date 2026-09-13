@@ -15,8 +15,8 @@ every checkpoint commit that changes it. Decisions referenced as D1… are in
 | M4 ✅ | Rumor spreading, proofs | `push_informs_all_whp` proved, audited |
 | M5 ✅ | 3-majority, statements | `theories/majority/{model,oneround,growth,saturation,main}.v` skeletons compile |
 | M6 ✅ | 3-majority, proofs | `majority3_consensus_whp` proved, audited |
-| M7 | Blueprint + Pages | `rocqblueprint` site mirroring both Lean blueprints, deployed; coqdoc |
-| M8 | Faithfulness audit | `docs/LEAN_TO_ROCQ.md` maps every Lean declaration to its Rocq counterpart; `Equivalence.lean` ported |
+| M7 ✅ | Blueprint + Pages | `rocqblueprint` site mirroring both Lean blueprints, deployed; coqdoc |
+| M8 ✅ | Faithfulness audit | `docs/LEAN_TO_ROCQ.md` maps every Lean declaration to its Rocq counterpart; `Equivalence.lean` ported (done 2026-09-13: 176 Lean declarations audited, no statement deviation; `theories/prob/equivalence.v` proved) |
 
 ## File map (Lean → Rocq)
 
@@ -31,7 +31,7 @@ every checkpoint commit that changes it. Decisions referenced as D1… are in
 | `RumorSpread/Growth.lean` | `theories/rumor/growth.v` | rumor |
 | `RumorSpread/Saturation.lean` | `theories/rumor/saturation.v` | rumor |
 | `RumorSpread/Main.lean` | `theories/rumor/main.v` | rumor |
-| `RumorSpread/Equivalence.lean` | `theories/prob/equivalence.v` | prob (M8) |
+| `RumorSpread/Equivalence.lean` (`expList_eq_avg_ofFn`) | `theories/prob/equivalence.v` | prob |
 | `ThreeMajority/Model.lean` | `theories/majority/model.v` | majority |
 | `ThreeMajority/OneRound.lean` | `theories/majority/oneround.v` | majority |
 | `ThreeMajority/Growth.lean` | `theories/majority/growth.v` | majority |
@@ -45,14 +45,15 @@ every checkpoint commit that changes it. Decisions referenced as D1… are in
 | `theories/prelude.v` | – | 0 | smoke lemmas; `make gate` and `verify.sh` green (M0 done 2026-09-11) |
 | `theories/prob/avg.v` | 19/19 | 0 | proved 2026-09-12 |
 | `theories/prob/indep.v` | 6/6 | 0 | proved 2026-09-12; `bigA_distr_bigA` replaces Lean's hand induction |
+| `theories/prob/equivalence.v` | 1/1 (+2 helpers) | 0 | proved 2026-09-13; `expList_eq_avg_tuple` (Lean `expList_eq_avg_ofFn`) depends only on the three `boolp` axioms; helpers `avg_pair` (Fubini), `cons_tuple_bij`; **M8 done** |
 | `theories/prob/bounds.v` | 12/12 (+2 helpers) | 0 | proved 2026-09-12 (agent); M2 complete |
 | `theories/prob/chernoff.v` | 7/7 | 0 | proved 2026-09-12 (agent, 3 compile iterations) |
-| `theories/rumor/model.v` | 16/16 | 15 | skeletons compile 2026-09-12; `Tgt n` is a dependent finfun |
+| `theories/rumor/model.v` | 16/16 | 0 | skeletons compile 2026-09-12; `Tgt n` is a dependent finfun |
 | `theories/rumor/oneround.v` | 7/7 (+1 helper) | 0 | proved 2026-09-12 (agent) |
 | `theories/rumor/growth.v` | 3/3 | 0 | proved 2026-09-12 (agent) |
 | `theories/rumor/saturation.v` | 1/1 | 0 | proved 2026-09-12 (agent) |
 | `theories/rumor/main.v` | 7/7 (+6 helpers) | 0 | proved 2026-09-12 (agent); **M4 done**: `push_informs_all_whp` audited |
-| `theories/majority/model.v` | 13/13 | 10 | skeletons compile 2026-09-12 |
+| `theories/majority/model.v` | 13/13 | 0 | skeletons compile 2026-09-12 |
 | `theories/majority/oneround.v` | 18/18 | 0 | proved 2026-09-12 (agent) |
 | `theories/majority/growth.v` | 10/10 | 0 | proved 2026-09-12 (agent) |
 | `theories/majority/saturation.v` | 17/17 (+2 Padé helpers) | 0 | proved 2026-09-12 (agent); **M6 done**: `majority3_consensus_whp` audited |

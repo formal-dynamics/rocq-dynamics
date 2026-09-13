@@ -11,6 +11,7 @@
 theories/prelude.v
 theories/prob/avg.v
 theories/prob/indep.v
+theories/prob/equivalence.v
 theories/prob/bounds.v
 theories/prob/chernoff.v
 theories/rumor/model.v
