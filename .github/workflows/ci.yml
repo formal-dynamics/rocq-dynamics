@@ -1,13 +1,29 @@
-name: Blueprint and docs
+name: CI
 
-# Non-gating documentation workflow (build.yml is the gate): builds the
-# rocqblueprint site (web + pdf), the coqdoc API documentation, checks that
-# every declaration cited by the blueprint exists, assembles everything under
-# the Jekyll home page and uploads the result as the `site` artifact.
+# One workflow for everything: the static gates, the Rocq build and the axiom
+# audit, the blueprint (web + pdf), the coqdoc API documentation, and the Pages
+# deploy of https://formal-dynamics.github.io/rocq-dynamics/ .
 #
-# Deployment to GitHub Pages runs only on pushes to main and publishes
-# https://formal-dynamics.github.io/rocq-dynamics/ ; it is best-effort (the
-# deploy job is allowed to fail), and the `site` artifact is always produced.
+# This used to be two workflows, build.yml (the gate) and blueprint.yml (the
+# site). Both installed the same pinned opam switch and compiled the whole
+# development, so every push paid ~30 min of identical work twice, in parallel.
+# Here the development is built exactly once, in `build`, and `assemble` glues
+# its coqdoc output to the blueprint.
+#
+# Caching (shared by nothing else now, but still worth its keys):
+#  - opam: scripts/ci_install_deps.sh owns the package list and tars the
+#    container's opam root into the workspace; the cache is keyed on that
+#    script, so the key and the packages cannot drift apart.
+#  - build products: what makes reuse SOUND is scripts/ci_vo_cache.sh, which
+#    deletes the .vo of every source whose sha256 moved, so make cannot skip a
+#    file that really changed (timestamps alone cannot decide this: a commit
+#    authored before the previous run finished is older than the .vo that run
+#    cached). What makes reuse EFFECTIVE is git-restore-mtime: a fresh checkout
+#    stamps every .v with the checkout time, which would make the surviving
+#    .vo look stale and rebuild everything anyway.
+#
+# Bump CACHE_TAG together with COQ_IMAGE (cache keys cannot interpolate an
+# image name containing "/" and ":" cleanly).
 
 on:
   push:
@@ -26,11 +42,23 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  # Keep in step with build.yml; bump CACHE_TAG together with COQ_IMAGE.
+  # MathComp 2.5.0 on Rocq 9.1 (tag used by LLM4Rocq/digraph-theory CI).
   COQ_IMAGE: 'mathcomp/mathcomp:2.5.0-rocq-prover-9.1'
   CACHE_TAG: 'mc2.5.0-rocq9.1'
 
 jobs:
+  # Seconds, and independent of everything else: report a layering or Admitted
+  # mistake immediately instead of after the blueprint and the build.
+  gates:
+    name: Static gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Check the import layering
+        run: python3 scripts/check_layers.py
+      - name: No Admitted / admit / Axiom in theories
+        run: python3 scripts/check_admitted.py
+
   blueprint:
     name: Build the blueprint (web + pdf)
     runs-on: ubuntu-latest
@@ -71,9 +99,11 @@ jobs:
           path: blueprint/rocq_decls
           if-no-files-found: error
 
-  docs:
-    name: Build coqdoc and check the cited declarations
-    needs: blueprint
+  # The single Rocq build: gate (axiom audit), declaration check and coqdoc all
+  # come off it. It needs `blueprint` only for the rocq_decls list to check.
+  build:
+    name: Build, audit the axioms, and build the documentation
+    needs: [gates, blueprint]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -89,9 +119,6 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq git-restore-mtime
           git restore-mtime
-      # The same two caches as build.yml, under the same keys: whichever
-      # workflow runs first populates them and the other reuses them. See
-      # build.yml for why the timestamps above make the .vo cache sound.
       - name: Cache the opam dependencies
         uses: actions/cache@v4
         with:
@@ -128,6 +155,9 @@ jobs:
             startGroup "Build"
               make -j2
             endGroup
+            startGroup "Axiom audit"
+              ./verify.sh --no-clean
+            endGroup
             startGroup "Check the declarations cited by the blueprint"
               python3 scripts/check_rocq_decls.py blueprint/rocq_decls
             endGroup
@@ -135,7 +165,9 @@ jobs:
               make -f CoqMakefile gallinahtml
             endGroup
           after_script: |
-            sudo chown -R 1001:116 . || true
+            startGroup "Restore permissions"
+              sudo chown -R 1001:116 . || true
+            endGroup
       - name: Record the source hashes for the next run
         # Also on failure: the cache is saved either way, and the manifest has
         # to keep describing the sources the cached .vo were built from.
@@ -157,7 +189,7 @@ jobs:
 
   assemble:
     name: Assemble the site
-    needs: [blueprint, docs]
+    needs: [blueprint, build]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -188,6 +220,12 @@ jobs:
           test -f _site/docs/toc.html
           test -f _site/docs/index.html
           test -f _site/docs/indexpage.html
+          # The project site lives under /rocq-dynamics/, so a link emitted at
+          # the domain root is broken (this is how the Blueprint link on the
+          # home page broke: an empty baseurl made relative_url drop the
+          # repository path).
+          ! grep -qE 'href="/(blueprint|docs)' _site/index.html
+          grep -q 'href="/rocq-dynamics/blueprint/"' _site/index.html
       - uses: actions/upload-artifact@v4
         with:
           name: site
