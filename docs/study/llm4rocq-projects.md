@@ -593,7 +593,7 @@ self-contained Chernoff bound, rumor spreading on K_n in O(log n) rounds w.h.p.,
 3-majority consensus w.h.p. Built on MathComp and mathcomp-analysis (reals).
 """
 maintainer: "Emanuele Natale <emanuele.natale@inria.fr>"
-authors: ["Emanuele Natale" "Marc Lelarge"]
+authors: ["Emanuele Natale"]
 license: "Apache-2.0"
 homepage: "https://github.com/<org>/rocq-dynamics"
 bug-reports: "https://github.com/<org>/rocq-dynamics/issues"
