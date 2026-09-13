@@ -25,6 +25,10 @@ scratch/
 .claude/
 !.claude/agents/
 
+# CI caches (see scripts/ci_install_deps.sh, scripts/ci_vo_cache.sh)
+.ci-opam.tar
+.ci-vo-manifest.sha256
+
 # Python / tooling
 __pycache__/
 *.pyc

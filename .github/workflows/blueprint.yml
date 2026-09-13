@@ -25,6 +25,11 @@ concurrency:
   group: pages-${{ github.event_name == 'pull_request' && github.head_ref || 'deploy' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+env:
+  # Keep in step with build.yml; bump CACHE_TAG together with COQ_IMAGE.
+  COQ_IMAGE: 'mathcomp/mathcomp:2.5.0-rocq-prover-9.1'
+  CACHE_TAG: 'mc2.5.0-rocq9.1'
+
 jobs:
   blueprint:
     name: Build the blueprint (web + pdf)
@@ -72,25 +77,52 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          # git-restore-mtime walks the history to date each file.
+          fetch-depth: 0
       - uses: actions/download-artifact@v4
         with:
           name: rocq-decls
           path: blueprint
+      - name: Restore the source timestamps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq git-restore-mtime
+          git restore-mtime
+      # The same two caches as build.yml, under the same keys: whichever
+      # workflow runs first populates them and the other reuses them. See
+      # build.yml for why the timestamps above make the .vo cache sound.
+      - name: Cache the opam dependencies
+        uses: actions/cache@v4
+        with:
+          path: .ci-opam.tar
+          key: opam-${{ env.CACHE_TAG }}-${{ hashFiles('scripts/ci_install_deps.sh') }}
+      - name: Cache the build products
+        uses: actions/cache@v4
+        with:
+          path: |
+            theories/**/*.vo
+            theories/**/*.vok
+            theories/**/*.vos
+            theories/**/*.glob
+            .ci-vo-manifest.sha256
+          key: vo-${{ env.CACHE_TAG }}-${{ hashFiles('scripts/ci_install_deps.sh') }}-${{ hashFiles('theories/**/*.v', '_CoqProject') }}
+          restore-keys: |
+            vo-${{ env.CACHE_TAG }}-${{ hashFiles('scripts/ci_install_deps.sh') }}-
+      - name: Drop the cached build products of edited sources
+        run: bash scripts/ci_vo_cache.sh prune
       - uses: coq-community/docker-coq-action@v1
         with:
-          custom_image: 'mathcomp/mathcomp:2.5.0-rocq-prover-9.1'
-          install: |
-            startGroup "Install dependencies"
-              opam repo add rocq-released https://rocq-prover.org/opam/released || true
-              opam update -y
-              opam install -y \
-                rocq-mathcomp-classical.1.16.0 rocq-mathcomp-reals.1.16.0 \
-                rocq-mathcomp-analysis.1.16.0 \
-                coq-mathcomp-algebra-tactics.1.2.7 coq-mathcomp-zify
-            endGroup
-          before_script: |
+          custom_image: ${{ env.COQ_IMAGE }}
+          # The chown must happen before `install`, which writes the opam
+          # tarball into the workspace.
+          before_install: |
             startGroup "Workaround permission issue"
               sudo chown -R "$(id -u):$(id -g)" .
+            endGroup
+          install: |
+            startGroup "Install dependencies"
+              bash scripts/ci_install_deps.sh
             endGroup
           script: |
             startGroup "Build"
@@ -104,6 +136,11 @@ jobs:
             endGroup
           after_script: |
             sudo chown -R 1001:116 . || true
+      - name: Record the source hashes for the next run
+        # Also on failure: the cache is saved either way, and the manifest has
+        # to keep describing the sources the cached .vo were built from.
+        if: always()
+        run: bash scripts/ci_vo_cache.sh record
       - name: Collect coqdoc
         run: |
           sudo chown -R "$(id -u):$(id -g)" html

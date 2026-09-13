@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- CI caching. Both workflows recompiled the pinned opam switch (compiling
+  mathcomp-analysis from source dominates) and then the whole development on
+  every push, ~30 min each:
+  - `scripts/ci_install_deps.sh` holds the package list and tars the container's
+    opam root into the workspace, where `actions/cache` keys it on that script.
+  - `scripts/ci_vo_cache.sh` makes reuse of the `.vo` cache sound *by content*:
+    `prune` deletes the build products of every source whose sha256 moved (and
+    every orphan), so `make` cannot skip a file that really changed. Timestamps
+    alone cannot decide this: a commit authored before the previous run finished
+    is older than the `.vo` that run cached. Restoring commit timestamps then
+    makes the surviving `.vo` look current rather than stale, so the cache
+    actually gets used.
+  - Verified locally: a leaf edit rebuilds 1 file, a `prelude.v` edit rebuilds
+    all 16, an unchanged tree rebuilds 0, and a missing manifest, a changed
+    `_CoqProject` or a deleted source each drop the affected products.
+
 - Site and documentation fixes (reported by A. Kumar after the first public deploy):
   - `home_page/`: LaTeX now renders — the MathJax include still pointed at
     `cdn.mathjax.org`, retired in 2017, and never configured `$...$` as inline
