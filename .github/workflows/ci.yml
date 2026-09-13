@@ -151,6 +151,10 @@ jobs:
             startGroup "Install dependencies"
               bash scripts/ci_install_deps.sh
             endGroup
+          before_script: |
+            startGroup "Mark the surviving build products as current"
+              bash scripts/ci_vo_cache.sh touch
+            endGroup
           script: |
             startGroup "Build"
               make -j2

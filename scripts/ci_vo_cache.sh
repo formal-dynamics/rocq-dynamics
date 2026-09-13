@@ -14,6 +14,13 @@
 #           rebuild exactly what changed. Files whose hash still matches keep
 #           their .vo, and make's own dependency graph takes care of their
 #           dependents.
+#   touch   marks the build products that survived `prune` as current. Run it
+#           INSIDE the container, after the opam root has been restored:
+#           coqdep makes every .vo depend on the rocqworker binary of the
+#           switch, so a switch unpacked after the .vo were cached makes all
+#           of them look stale and the cache buys nothing. Re-dating them is
+#           safe precisely because `prune` already deleted the ones whose
+#           source moved -- correctness rests on the hashes, never on mtimes.
 #
 # With no manifest, or a changed _CoqProject (file list and flags), nothing in
 # the cache is trustworthy and everything goes.
@@ -74,8 +81,24 @@ case "${1:-}" in
     echo "pruned the build products of $dropped source file(s)"
     ;;
 
+  touch)
+    worker=$(find "$HOME/.opam" -name 'rocqworker*' -type f 2>/dev/null | head -1)
+    sample=$(find theories -name '*.vo' 2>/dev/null | head -1)
+    if [ -n "$sample" ]; then
+      echo "before:"
+      [ -n "$worker" ] && ls -l --time-style=long-iso "$worker"
+      ls -l --time-style=long-iso "$sample"
+    fi
+    find theories \( -name '*.vo' -o -name '*.vok' -o -name '*.vos' \
+                  -o -name '*.glob' \) -exec touch {} +
+    if [ -n "$sample" ]; then
+      echo "after:"
+      ls -l --time-style=long-iso "$sample"
+    fi
+    ;;
+
   *)
-    echo "usage: $0 {record|prune}" >&2
+    echo "usage: $0 {record|prune|touch}" >&2
     exit 2
     ;;
 esac
