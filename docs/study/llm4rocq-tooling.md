@@ -44,7 +44,7 @@ Workspace resolution: walks up from the file for `_RocqProject`/`_CoqProject`/`d
 
 Concurrency: one pet per server process; Claude Code keys MCP servers by name, so parallel sub-agents sharing a name share one pet. The README prescribes a **named pool**: `.claude/agents/rocq-prover-1.md … -N.md`, each with a uniquely named inline `mcpServers` entry (`command: rocq-mcp`, optional `env.ROCQ_WORKSPACE=<worktree k>`, `ROCQ_MAX_PET_RSS_MB`). Plugin sub-agents ignore `mcpServers` frontmatter, so the pool must be plain `.claude/agents/` files. Agent registry is snapshotted at session start.
 
-Sub-agent briefing preamble recommended by the README (now in our `CLAUDE.md`):
+Sub-agent briefing preamble recommended by the README (now in our `AGENTS.md`):
 ```
 Before any Write or `coqc` on a .v file:
   1. Consult project Rocq guidance (CLAUDE.md / Skill).

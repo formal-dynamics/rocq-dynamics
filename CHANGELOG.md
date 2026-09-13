@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- README: credit LLM assistance without naming a particular coding agent; add
+  `AGENTS.md` as the agent-facing working rules.
+
 ### M7 — blueprint and documentation site (2026-09-13)
 - `blueprint/` (rocqblueprint, 76 nodes mirroring both Lean blueprints, all proved),
   `home_page/` (Jekyll), `scripts/check_rocq_decls.py` (the `checkdecls` analogue),

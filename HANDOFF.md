@@ -1,6 +1,6 @@
 # HANDOFF — rocq-dynamics (written 2026-09-13 by Claude Code, for Codex or any other agent)
 
-Read this first, then `CLAUDE.md` (working rules, also valid for you), `docs/DESIGN.md`
+Read this first, then `AGENTS.md` (working rules, also valid for you), `docs/DESIGN.md`
 (representation decisions and §4 "Lessons": ~40 MathComp pitfalls we hit), `docs/PLAN.md`
 (milestones and per-file status), `CHANGELOG.md`.
 

@@ -78,9 +78,10 @@ mirroring the two Lean blueprints statement-for-statement, so progress is visibl
 the mathematician co-authors; generated later by `rocqblueprint new`. The LaTeX
 papers in `reference/leanamycs/*/latex/` remain the informal proofs.
 
-**D9. Agents.** All agent tooling is user-level (rocq-mcp, rocqet, `rocq` and
-`mathcomp-skills` plugins, opam switch `rocq-9.1.1`), so this repo carries only
-`CLAUDE.md`, the gates, and (later) a `.claude/agents/` pool for parallel provers.
+**D9. Agents.** All agent tooling is user-level (rocq-mcp, rocqet, MathComp style
+skills, opam switch `rocq-9.1.1`), so this repo carries only `AGENTS.md` (with
+`CLAUDE.md` as a compatibility symlink), the gates, and (later) a named MCP pool
+for parallel provers.
 
 ## 3. Open questions
 

@@ -54,23 +54,26 @@ theories/rumor/           the push protocol                (parallel to majority
 theories/majority/        the 3-majority process           (parallel to rumor/)
 scripts/                  check_layers.py, check_admitted.py, check_rocq_decls.py
 blueprint/, home_page/    rocqblueprint sources and the Jekyll landing page
+AGENTS.md                 working rules for coding agents
 docs/DESIGN.md            representation decisions, Lean -> Rocq dictionary
 docs/PLAN.md              milestones, file map, status table
 docs/study/               survey of the LLM4Rocq tooling and project conventions
 reference/leanamycs/      the Lean source (git submodule, read-only)
 ```
 
-## Working with AI agents
+## LLM assistance
 
-This project is developed with Claude Code and the tools of
-[LLM4Rocq](https://github.com/LLM4Rocq): the `rocq-mcp` MCP server (interactive goals via
-petanque), the `rocq` plugin (`/rocq:prove`, `/rocq:autoprove`, `/rocq:checkpoint`) and
-the `mathcomp-skills` plugin (MathComp style guide, `/mathcomp-review`). They are
-installed at user level; `docs/study/llm4rocq-tooling.md` §4 has the exact commands,
-and `CLAUDE.md` the working rules. A collaborator without the user-level setup can
-register the MCP server for this repo only:
+This project is LLM-assisted. It uses the [LLM4Rocq](https://github.com/LLM4Rocq)
+tooling: the `rocq-mcp` MCP server (interactive goals via petanque) and the MathComp
+style/review material documented in `docs/study/llm4rocq-tooling.md`. Working rules
+for coding agents are in `AGENTS.md`. A collaborator can install the MCP server with
 
 ```bash
 uv tool install "git+https://github.com/LLM4Rocq/rocq-mcp"
-claude mcp add --scope project rocq-mcp -- opam exec --switch=rocq-9.1.1 -- rocq-mcp
+```
+
+and register a stdio MCP server named `rocq-mcp` in their coding agent, running
+
+```bash
+opam exec --switch=rocq-9.1.1 -- rocq-mcp
 ```
