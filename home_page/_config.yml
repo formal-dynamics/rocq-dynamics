@@ -1,5 +1,6 @@
 title: rocq-dynamics
 description: Rocq / MathComp formalizations of rumor spreading and 3-majority dynamics on the complete graph
+authors: Aakash Kumar, Maria Sofia Bucarelli and Emanuele Natale
 baseurl: ""
 url: "https://formal-dynamics.github.io/rocq-dynamics"
 github_username: formal-dynamics

@@ -35,6 +35,8 @@ _build/
 # blueprint / site build products
 blueprint/src/web/
 blueprint/src/print/
+blueprint/src/.build/
+blueprint/src/web.paux
 blueprint/lean_decls
 site/
 
