@@ -1,0 +1,8 @@
+# Hooks into the generated CoqMakefile (auto-included by it).
+#
+# coqdoc: the API documentation is built with `gallinahtml` (statements only,
+# no proof scripts -- see .github/workflows/blueprint.yml and `make docs`).
+# `--index indexpage` moves the global index of identifiers off index.html so
+# that index.html can be the table of contents, i.e. so that browsing to
+# <site>/docs/ lands on the list of modules rather than on a bare A-Z index.
+COQDOCEXTRAFLAGS = --index indexpage --toc-depth 2

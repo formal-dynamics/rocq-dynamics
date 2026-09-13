@@ -43,9 +43,10 @@ exists (fun t : k.+1.-tuple T => (thead t, [tuple of behead t])).
 by move=> t; apply/val_inj; case/tupleP: t => a t /=; rewrite theadE.
 Qed.
 
-(** Lean: [expList_eq_avg_ofFn] — the recursive expectation over [k] rounds
-    is the uniform average over the product space [k.-tuple T] of all
-    length-[k] draw sequences. *)
+(** The recursive expectation over [k] rounds is the uniform average over
+    the product space [k.-tuple T] of all length-[k] draw sequences: the
+    definition by conditioning agrees with the textbook object.
+    (Lean: [expList_eq_avg_ofFn].) *)
 Lemma expList_eq_avg_tuple (T : finType) k (F : seq T -> R) :
   expList k F = avg (fun w : k.-tuple T => F w).
 Proof.

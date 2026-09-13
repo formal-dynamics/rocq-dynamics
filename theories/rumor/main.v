@@ -21,12 +21,12 @@ Context {R : realType}.
 
 Variable n : nat.
 
-(** Lean: [prNotAllInformed n v₀ T] — probability that not all nodes are
-    informed after [k] rounds, starting from the single node [v0]. *)
+(** Probability that not all nodes are informed after [k] rounds, starting from
+    the single node [v0]. (Lean: [prNotAllInformed n v₀ T].) *)
 Definition prNotAllInformed (v0 : 'I_n) (k : nat) : R :=
   expList k (fun s : seq (Tgt n) => (run [set v0] s != [set: 'I_n])%:R).
 
-(** Lean: [prNotAllInformed_le] — gluing the two phases. *)
+(** Gluing the two phases. (Lean: [prNotAllInformed_le].) *)
 Lemma prNotAllInformed_le (v0 : 'I_n) (L k1 k2 : nat) :
   (2 <= n)%N -> n%:R <= (9 / 8 : R) ^+ L ->
   prNotAllInformed v0 (k1 + k2)
@@ -106,7 +106,8 @@ move=> x0; rewrite /ceiln natr_absz ger0_norm; last by rewrite ceil_ge0; lra.
 by have := ceilB1_lt x; rewrite intrB mulr1z; lra.
 Qed.
 
-(** Lean: [numeric_A]. *)
+(** Numeric step A: [ceiln (9 ln n) + 1] good rounds multiply a single
+    informed node past [n], since [(9/8) ^ that >= n]. (Lean: [numeric_A].) *)
 Lemma numeric_A :
   (2 <= n)%N -> n%:R <= (9 / 8 : R) ^+ (ceiln (9 * ln (n%:R : R)) + 1).
 Proof.
@@ -126,7 +127,9 @@ have := ler_pM (x1 := 9 * L) (x2 := 1 / 9) (y1 := (ceiln (9 * L))%:R)
 by lra.
 Qed.
 
-(** Lean: [numeric_B]. *)
+(** Numeric step B: the growth-phase failure bound
+    [2 ^ (ceiln (9 ln n) + 1) * (15/16) ^ (ceiln (117 ln n) + 23)] is at most
+    [1/n]. (Lean: [numeric_B].) *)
 Lemma numeric_B :
   (2 <= n)%N ->
   2 ^+ (ceiln (9 * ln (n%:R : R)) + 1) * (15 / 16 : R) ^+ (ceiln (117 * ln (n%:R : R)) + 23)
@@ -162,7 +165,8 @@ have := ler0n R (ceiln (117 * L)).
 by lra.
 Qed.
 
-(** Lean: [numeric_C]. *)
+(** Numeric step C: [ceiln (6 ln n)] saturation rounds bring the expected
+    number of uninformed nodes from [n] below [1/n]. (Lean: [numeric_C].) *)
 Lemma numeric_C :
   (2 <= n)%N -> (2 / 3 : R) ^+ ceiln (6 * ln (n%:R : R)) * n%:R <= 1 / n%:R.
 Proof.
@@ -185,7 +189,7 @@ have := ler_pM (x1 := 6 * L) (x2 := 1 / 3) (y1 := (ceiln (6 * L))%:R)
 by lra.
 Qed.
 
-(** Lean: [push_informs_all_whp] — the main theorem. *)
+(** The main theorem. (Lean: [push_informs_all_whp].) *)
 Theorem push_informs_all_whp (v0 : 'I_n) :
   (2 <= n)%N ->
   prNotAllInformed v0 ((ceiln (117 * ln (n%:R : R)) + 23) + ceiln (6 * ln (n%:R : R)))
@@ -197,8 +201,8 @@ apply: le_trans (prNotAllInformed_le v0 _ _ hn (numeric_A hn)) _.
 lra.
 Qed.
 
-(** Lean: [push_informs_all_whp'] — the same, as a lower bound on the
-    probability that everyone is informed. *)
+(** The same, as a lower bound on the probability that everyone is informed.
+    (Lean: [push_informs_all_whp'].) *)
 Theorem push_informs_all_whp' (v0 : 'I_n) :
   (2 <= n)%N ->
   1 - 2 / n%:R

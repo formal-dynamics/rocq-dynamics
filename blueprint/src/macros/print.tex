@@ -27,3 +27,13 @@
  {\clist_map_inline:nn{#1}{\vphantom{\ref{##1}}}%
   \ignorespaces}
 \ExplSyntaxOff
+
+% Fully qualified Rocq names such as
+% \texttt{Dynamics.majority.main.majority3\_consensus\_whp} are single
+% unbreakable words wider than a text line, and used to run into the margin
+% (13 overfull \hbox warnings, the worst 193pt wide). Allow a line break
+% after each underscore of an identifier and give TeX a little slack for the
+% remaining near-misses.
+\renewcommand{\_}{\textunderscore\allowbreak}
+\emergencystretch=3em
+\sloppy

@@ -20,15 +20,17 @@ Local Open Scope ring_scope.
 Section Indep.
 Context {R : realType}.
 
-(** Lean: [avg_mul_prod] — independence for a pair of coordinates. No
-    nonemptiness hypothesis: if either factor is empty both sides are [0]. *)
+(** Independence for a pair of coordinates: the average of a product of
+    functions of *different* coordinates is the product of the averages. No
+    nonemptiness hypothesis — if either factor is empty both sides are [0].
+    (Lean: [avg_mul_prod].) *)
 Lemma avg_mul_prod (B D : finType) (g : B -> R) (h : D -> R) :
   avg (fun p : B * D => g p.1 * h p.2) = avg g * avg h.
 Proof.
 by rewrite /avg card_prod natrM invfM mulrACA big_distrlr pair_bigA.
 Qed.
 
-(** Lean: [avg_fst_mul] — marginal on the first coordinate. *)
+(** Marginal on the first coordinate. (Lean: [avg_fst_mul].) *)
 Lemma avg_fst (B D : finType) (g : B -> R) :
   (0 < #|D|)%N -> avg (fun p : B * D => g p.1) = avg g.
 Proof.
@@ -36,7 +38,7 @@ move=> D0; rewrite -[RHS](mulr1 (avg g)) -(avg_const (1 : R) D0) -avg_mul_prod.
 by congr avg; apply/funext => p /=; rewrite mulr1.
 Qed.
 
-(** Lean: [avg_snd_mul] — marginal on the second coordinate. *)
+(** Marginal on the second coordinate. (Lean: [avg_snd_mul].) *)
 Lemma avg_snd (B D : finType) (h : D -> R) :
   (0 < #|B|)%N -> avg (fun p : B * D => h p.2) = avg h.
 Proof.
@@ -44,7 +46,7 @@ move=> B0; rewrite -[RHS](mul1r (avg h)) -(avg_const (1 : R) B0) -avg_mul_prod.
 by congr avg; apply/funext => p /=; rewrite mul1r.
 Qed.
 
-(** Lean: [avg_equiv] — reindexing [avg] along a bijection. *)
+(** Reindexing [avg] along a bijection. (Lean: [avg_equiv].) *)
 Lemma avg_bij (T U : finType) (e : T -> U) (F : U -> R) :
   bijective e -> avg (fun a => F (e a)) = avg F.
 Proof.
@@ -52,9 +54,10 @@ move=> bije; rewrite /avg (bij_eq_card bije); congr (_ / _).
 by rewrite [RHS](reindex e) //; exact: onW_bij.
 Qed.
 
-(** Lean: [avg_prod_pi] — independence over an ['I_n]-indexed product: the
-    average of [\prod_i f i (x i)] over the product type [{ffun 'I_n -> G}]
-    equals the product of the averages [avg (f i)]. *)
+(** Independence over an ['I_n]-indexed product: the average of
+    [\prod_i f i (x i)] over the product type [{ffun 'I_n -> G}] is the
+    product of the averages [avg (f i)]. This is the form the 3-majority
+    round bound consumes. (Lean: [avg_prod_pi].) *)
 Lemma avg_prod_ffun (G : finType) (n : nat) (f : 'I_n -> G -> R) :
   avg (fun x : {ffun 'I_n -> G} => \prod_(i < n) f i (x i))
     = \prod_(i < n) avg (f i).
@@ -63,7 +66,7 @@ rewrite /avg -bigA_distr_bigA card_ffun card_ord natrX.
 by rewrite [RHS]big_split /= prodr_const card_ord exprVn.
 Qed.
 
-(** Lean: [avg_eval] — marginal of a single coordinate of the product. *)
+(** Marginal of a single coordinate of the product. (Lean: [avg_eval].) *)
 Lemma avg_eval (G : finType) (n : nat) (v : 'I_n) (F : G -> R) :
   (0 < #|G|)%N -> avg (fun x : {ffun 'I_n -> G} => F (x v)) = avg F.
 Proof.

@@ -10,7 +10,7 @@ O(log n) rounds w.h.p., and 3-majority consensus in O(log n) rounds w.h.p.
 Built on MathComp and mathcomp-analysis (real numbers, exp, ln).
 """
 maintainer: "Emanuele Natale <emanuele.natale@inria.fr>"
-authors: ["Emanuele Natale" "Marc Lelarge"]
+authors: ["Emanuele Natale"]
 license: "Apache-2.0"
 homepage: "https://github.com/formal-dynamics/rocq-dynamics"
 bug-reports: "https://github.com/formal-dynamics/rocq-dynamics/issues"

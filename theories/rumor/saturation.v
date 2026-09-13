@@ -19,7 +19,9 @@ Section Saturation.
 Variable n : nat.
 Context {R : realType}.
 
-(** Lean: [saturation]. *)
+(** Saturation phase: once at least half the nodes are informed, each round
+    shrinks the expected number of *uninformed* nodes by a factor [2/3].
+    (Lean: [saturation].) *)
 Lemma saturation k :
   (2 <= n)%N -> forall I : {set 'I_n}, (n <= 2 * #|I|)%N ->
   expList k (fun s : seq (Tgt n) => n%:R - #|run I s|%:R : R)

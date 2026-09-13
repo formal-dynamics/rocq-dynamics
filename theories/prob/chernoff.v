@@ -34,7 +34,7 @@ Hypothesis Y01 : forall i x, Y i x = 0 \/ Y i x = 1.
 Local Notation X x := (\sum_(i < n) Y i (x i)).
 Local Notation mu := (\sum_(i < n) avg (Y i)).
 
-(** Lean: [avg_exp_le] — MGF bound, no sign restriction on [t]. *)
+(** MGF bound, no sign restriction on [t]. (Lean: [avg_exp_le].) *)
 Lemma avg_exp_le (t : R) :
   avg (fun x : {ffun 'I_n -> G} => expR (t * X x)) <= expR (mu * (expR t - 1)).
 Proof.
@@ -53,7 +53,7 @@ case: (posnP #|G|) => [G0|G0].
 by rewrite avgD avg_const // avgZ [avg _ * _]mulrC expR_ge1Dx.
 Qed.
 
-(** Lean: [avg_tail_ge] — upper tail, [t >= 0]. *)
+(** Upper tail, [t >= 0]. (Lean: [avg_tail_ge].) *)
 Lemma avg_tail_ge (t k : R) :
   0 <= t ->
   avg (fun x : {ffun 'I_n -> G} => ((k <= X x)%R)%:R : R)
@@ -69,7 +69,7 @@ apply: le_trans (avg_le pt) _; rewrite avgZ -(addrC (- (t * k))) expRD.
 by rewrite ler_pM2l ?expR_gt0 // avg_exp_le.
 Qed.
 
-(** Lean: [avg_tail_le] — lower tail, [t <= 0]. *)
+(** Lower tail, [t <= 0]. (Lean: [avg_tail_le].) *)
 Lemma avg_tail_le (t k : R) :
   t <= 0 ->
   avg (fun x : {ffun 'I_n -> G} => ((X x <= k)%R)%:R : R)
@@ -85,7 +85,7 @@ apply: le_trans (avg_le pt) _; rewrite avgZ -(addrC (- (t * k))) expRD.
 by rewrite ler_pM2l ?expR_gt0 // avg_exp_le.
 Qed.
 
-(** Lean: [avg_tail_ge_log] — closed-form upper tail at [t = ln (k / mu)]. *)
+(** Closed-form upper tail at [t = ln (k / mu)]. (Lean: [avg_tail_ge_log].) *)
 Lemma avg_tail_ge_ln (k m : R) :
   m = mu -> 0 < m -> m <= k ->
   avg (fun x : {ffun 'I_n -> G} => ((k <= X x)%R)%:R : R)
@@ -100,7 +100,7 @@ have -> : m * (k / m - 1) = k - m.
 by lra.
 Qed.
 
-(** Lean: [avg_tail_le_log] — closed-form lower tail at [t = ln (k / mu)]. *)
+(** Closed-form lower tail at [t = ln (k / mu)]. (Lean: [avg_tail_le_log].) *)
 Lemma avg_tail_le_ln (k m : R) :
   m = mu -> 0 < k -> k <= m ->
   avg (fun x : {ffun 'I_n -> G} => ((X x <= k)%R)%:R : R)
@@ -115,8 +115,8 @@ have -> : m * (k / m - 1) = k - m.
 by lra.
 Qed.
 
-(** Lean: [avg_tail_ge_log_le] — upper tail from an *upper bound* [mub] on
-    the mean (the exponent is monotone in the mean at the optimal [t]). *)
+(** Upper tail from an *upper bound* [mub] on the mean (the exponent is monotone
+    in the mean at the optimal [t]). (Lean: [avg_tail_ge_log_le].) *)
 Lemma avg_tail_ge_ln_le (k mub : R) :
   mu <= mub -> 0 < mub -> mub <= k ->
   avg (fun x : {ffun 'I_n -> G} => ((k <= X x)%R)%:R : R)
@@ -133,8 +133,8 @@ have E : mub * (k / mub - 1) = k - mub.
 by lra.
 Qed.
 
-(** Lean: [avg_tail_le_log_ge] — lower tail from a *lower bound* [mlb] on
-    the mean. *)
+(** Lower tail from a *lower bound* [mlb] on the mean. (Lean:
+    [avg_tail_le_log_ge].) *)
 Lemma avg_tail_le_ln_ge (k mlb : R) :
   mlb <= mu -> 0 < k -> k <= mlb ->
   avg (fun x : {ffun 'I_n -> G} => ((X x <= k)%R)%:R : R)

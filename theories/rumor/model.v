@@ -23,10 +23,14 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 Local Open Scope ring_scope.
 
-(** Lean: [Tgt n := ∀ v : Fin n, {u : Fin n // u ≠ v}]. *)
+(** A round configuration: every node [v] picks a target [u != v]. Being a
+    dependent finite function it is itself a [finType], which is what makes a
+    round a uniform draw from a finite space.
+    (Lean: [Tgt n := ∀ v : Fin n, {u : Fin n // u ≠ v}].) *)
 Notation Tgt n := {dffun forall v : 'I_n, {u : 'I_n | u != v}}.
 
-(** Lean: [tgt_nonempty]. *)
+(** There is at least one round configuration as soon as [n >= 2], so
+    averaging over [Tgt n] is meaningful. (Lean: [tgt_nonempty].) *)
 Lemma tgt_gt0 (n : nat) : (2 <= n)%N -> (0 < #|Tgt n|)%N.
 Proof.
 case: n => [|[|m]] // _; apply/card_gt0P.
@@ -40,25 +44,29 @@ Section Model.
 Variable n : nat.
 Implicit Types (I : {set 'I_n}) (r : Tgt n) (s : seq (Tgt n)) (u v : 'I_n).
 
-(** Lean: [step I r = I ∪ I.image (fun v => (r v : Fin n))]. *)
+(** One round: the informed set together with the targets of its members.
+    Uninformed nodes also draw a target, which is ignored — the
+    formalization-friendly convention of the Lean development.
+    (Lean: [step I r = I ∪ I.image (fun v => (r v : Fin n))].) *)
 Definition step I r : {set 'I_n} := I :|: [set val (r v) | v in I].
 
-(** Lean: [subset_step]. *)
+(** A round never un-informs a node. (Lean: [subset_step].) *)
 Lemma subset_step I r : I \subset step I r.
 Proof. exact: finset.subsetUl. Qed.
 
-(** Lean: [card_le_card_step]. *)
+(** Hence the informed set never shrinks. (Lean: [card_le_card_step].) *)
 Lemma card_le_card_step I r : (#|I| <= #|step I r|)%N.
 Proof. exact: subset_leq_card (subset_step I r). Qed.
 
-(** Lean: [card_step_le] — a round at most doubles the informed set. *)
+(** A round at most doubles the informed set. (Lean: [card_step_le].) *)
 Lemma card_step_le I r : (#|step I r| <= 2 * #|I|)%N.
 Proof.
 rewrite /step cardsU mul2n -addnn; apply: leq_trans (leq_subr _ _) _.
 by rewrite leq_add2l leq_imset_card.
 Qed.
 
-(** Lean: [mem_step]. *)
+(** [u] is informed after a round exactly when it was already informed or is
+    the target of some informed node. (Lean: [mem_step].) *)
 Lemma mem_step I r u :
   reflect (u \in I \/ exists2 v, v \in I & val (r v) = u) (u \in step I r).
 Proof.
@@ -69,54 +77,57 @@ apply: (iffP setUP) => [[uI | /imsetP[v vI ->]] | [uI | [v vI <-]]].
 - by right; apply: imset_f.
 Qed.
 
-(** Lean: [run I l] — fold [step] over a list of rounds. *)
+(** Fold [step] over a list of rounds. (Lean: [run I l].) *)
 Fixpoint run I s : {set 'I_n} :=
   if s is r :: s' then run (step I r) s' else I.
 
-(** Lean: [run_nil]. *)
+(** No rounds, no change. (Lean: [run_nil].) *)
 Lemma run_nil I : run I [::] = I.
 Proof. by []. Qed.
 
-(** Lean: [run_cons]. *)
+(** Peeling the first round off a trajectory. (Lean: [run_cons].) *)
 Lemma run_cons I r s : run I (r :: s) = run (step I r) s.
 Proof. by []. Qed.
 
-(** Lean: [subset_run] — the informed set only grows. *)
+(** The informed set only grows. (Lean: [subset_run].) *)
 Lemma subset_run I s : I \subset run I s.
 Proof.
 elim: s I => [|r s IH] I /=; first exact: subxx.
 exact: fintype.subset_trans (subset_step I r) (IH _).
 Qed.
 
-(** Lean: [run_append]. *)
+(** Running a concatenation of round lists is running one list after the
+    other — the trajectory counterpart of [expList_cat], used to split the
+    growth and saturation phases. (Lean: [run_append].) *)
 Lemma run_cat I s1 s2 : run I (s1 ++ s2) = run (run I s1) s2.
 Proof. by elim: s1 I => [|r s1 IH] I //=. Qed.
 
-(** Lean: [card_run_le]. *)
+(** The informed set never exceeds all [n] nodes. (Lean: [card_run_le].) *)
 Lemma card_run_le I s : (#|run I s| <= n)%N.
 Proof. by rewrite -[leqRHS](card_ord n) max_card. Qed.
 
-(** Lean: [goodRound] — the round grew [I] by a factor [9/8], or [I] already
-    exceeds [n/2]. Decidable in Lean, a [bool] here. *)
+(** The round grew [I] by a factor [9/8], or [I] already exceeds [n/2].
+    Decidable in Lean, a [bool] here. (Lean: [goodRound].) *)
 Definition goodRound I r : bool :=
   (9 * #|I| <= 8 * #|step I r|)%N || (n < 2 * #|I|)%N.
 
-(** Lean: [goodCount] — number of good rounds along a trajectory. *)
+(** Number of good rounds along a trajectory. (Lean: [goodCount].) *)
 Fixpoint goodCount I s : nat :=
   if s is r :: s' then goodRound I r + goodCount (step I r) s' else 0.
 
-(** Lean: [goodCount_nil]. *)
+(** An empty trajectory has no good rounds. (Lean: [goodCount_nil].) *)
 Lemma goodCount_nil I : goodCount I [::] = 0%N.
 Proof. by []. Qed.
 
-(** Lean: [goodCount_cons]. *)
+(** The good rounds of a trajectory split off the head round.
+    (Lean: [goodCount_cons].) *)
 Lemma goodCount_cons I r s :
   goodCount I (r :: s) = (goodRound I r + goodCount (step I r) s)%N.
 Proof. by []. Qed.
 
-(** Lean: [pow_goodCount_mul_card_le_card_run] — as long as the final
-    informed set is still [<= n/2], each good round multiplied its size by
-    [9/8]. *)
+(** As long as the final informed set is still [<= n/2], each good round
+    multiplied its size by [9/8]. (Lean: [pow_goodCount_mul_card_le_card_run].)
+    *)
 Lemma pow_goodCount_mul_card_le_card_run (R : realType) I s :
   (2 * #|run I s| <= n)%N ->
   (9 / 8 : R) ^+ goodCount I s * #|I|%:R <= #|run I s|%:R.

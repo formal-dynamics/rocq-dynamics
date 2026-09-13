@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+- Site and documentation fixes (reported by A. Kumar after the first public deploy):
+  - `home_page/`: LaTeX now renders — the MathJax include still pointed at
+    `cdn.mathjax.org`, retired in 2017, and never configured `$...$` as inline
+    math; replaced by the MathJax 3 include used by leanamycs. Footer no longer
+    names maintainers (matching the leanamycs home page).
+  - Blueprint pdf: fully qualified Rocq names are unbreakable words wider than a
+    text line and ran into the margin (13 overfull boxes, worst 193pt). Line
+    breaks are now allowed after identifier underscores (`macros/print.tex`);
+    zero overfull boxes.
+  - API documentation: built with coqdoc's `gallinahtml` (statements only, no
+    proof scripts) and `<site>/docs/` now lands on the table of contents rather
+    than the A–Z identifier index (`CoqMakefile.local`, `make docs`).
+  - Every docstring now states what the declaration means and carries the ported
+    Lean name as trailing provenance, instead of being only `Lean: [name].`
+    (147 docstrings; 72 of them previously had no mathematical content).
+  - README links to <https://formal-dynamics.github.io/rocq-dynamics/> and drops
+    the stale note about Pages being unavailable for a private repository.
 - README: credit LLM assistance without naming a particular coding agent; add
   `AGENTS.md` as the agent-facing working rules.
 
@@ -9,7 +26,7 @@
 - `blueprint/` (rocqblueprint, 76 nodes mirroring both Lean blueprints, all proved),
   `home_page/` (Jekyll), `scripts/check_rocq_decls.py` (the `checkdecls` analogue),
   `.github/workflows/blueprint.yml` (web + pdf + coqdoc + declaration check, `site`
-  artifact; Pages deploy best-effort — Pages is unavailable while the repo is private).
+  artifact; Pages deploy best-effort).
 - `HANDOFF.md` for the next agent.
 
 ### M8 — faithfulness audit and `Equivalence.lean` (2026-09-13)

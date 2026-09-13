@@ -1,5 +1,11 @@
 # rocq-dynamics
 
+**Website: <https://formal-dynamics.github.io/rocq-dynamics/>** — blueprint
+([web](https://formal-dynamics.github.io/rocq-dynamics/blueprint/),
+[pdf](https://formal-dynamics.github.io/rocq-dynamics/blueprint.pdf),
+[dependency graph](https://formal-dynamics.github.io/rocq-dynamics/blueprint/dep_graph_document.html))
+and [API documentation](https://formal-dynamics.github.io/rocq-dynamics/docs/).
+
 Rocq / MathComp formalizations of classical results on opinion dynamics and related
 distributed processes, ported from the Lean 4 + Mathlib monorepo
 [formal-dynamics/leanamycs](https://github.com/formal-dynamics/leanamycs)
@@ -35,9 +41,10 @@ make gate        # layering check + build + no-Admitted check + axiom audit
 the two Lean blueprints statement for statement (`\rocq{}` tags instead of `\lean{}`);
 `.github/workflows/blueprint.yml` builds it (web + pdf) together with the coqdoc API
 documentation, checks that every cited declaration exists (`scripts/check_rocq_decls.py`)
-and assembles the site under `home_page/`. The assembled site is the `site` artifact of
-each run; deployment to GitHub Pages happens automatically once Pages is available for the
-repository (it requires the repository to be public on the current plan). Locally:
+and assembles the site under `home_page/`, which is deployed to
+<https://formal-dynamics.github.io/rocq-dynamics/> on every push to `main` (the assembled
+site is also the `site` artifact of each run). The API documentation is built with
+coqdoc's `gallinahtml` target, so it lists statements without proof scripts. Locally:
 
 ```bash
 uv tool install rocqblueprint          # needs graphviz; xelatex + latexmk for the pdf

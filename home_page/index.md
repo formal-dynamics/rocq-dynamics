@@ -31,7 +31,7 @@ opinion with probability at least $1 - 500/n$. Main theorem:
 
 * [Blueprint]({{ '/blueprint/' | relative_url }}) · [as pdf]({{ '/blueprint.pdf' | relative_url }}) ·
   [dependency graph]({{ '/blueprint/dep_graph_document.html' | relative_url }})
-* [API documentation (coqdoc)]({{ '/docs/toc.html' | relative_url }})
+* [API documentation (coqdoc)]({{ '/docs/' | relative_url }})
 * [Source](https://github.com/formal-dynamics/rocq-dynamics) ·
   [Lean original](https://github.com/formal-dynamics/leanamycs)
 

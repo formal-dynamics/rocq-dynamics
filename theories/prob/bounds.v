@@ -20,8 +20,8 @@ Implicit Types x : R.
 
 (** ** From [RumorSpread/Bounds.lean] *)
 
-(** Lean: [one_sub_mul_le_pow] — Bernoulli's inequality,
-    [1 - m x <= (1 - x)^m] for [x <= 2]. *)
+(** Bernoulli's inequality, [1 - m x <= (1 - x)^m] for [x <= 2]. (Lean:
+    [one_sub_mul_le_pow].) *)
 Lemma one_sub_mul_le_pow x (m : nat) : x <= 2 -> 1 - m%:R * x <= (1 - x) ^+ m.
 Proof.
 move=> x2; have [x1|x1] := leP x 1.
@@ -36,8 +36,8 @@ have : (2 : R) <= m.+2%:R by rewrite ler_nat.
 nra.
 Qed.
 
-(** Lean: [mul_sub_sq_le_one_sub_pow] — second-order (Bonferroni) lower bound
-    [m x - m^2 x^2 / 2 <= 1 - (1 - x)^m] for [0 <= x <= 1]. *)
+(** Second-order (Bonferroni) lower bound [m x - m^2 x^2 / 2 <= 1 - (1 - x)^m]
+    for [0 <= x <= 1]. (Lean: [mul_sub_sq_le_one_sub_pow].) *)
 Lemma mul_sub_sq_le_one_sub_pow x (m : nat) :
   0 <= x -> x <= 1 -> m%:R * x - m%:R ^+ 2 * x ^+ 2 / 2 <= 1 - (1 - x) ^+ m.
 Proof.
@@ -48,8 +48,8 @@ rewrite [(1 - x) ^+ _]exprS -natr1.
 by have := sqr_ge0 x; have := ler0n R m; lra.
 Qed.
 
-(** Lean: [half_mul_le_one_sub_pow] — if [m x <= 1] then
-    [m x / 2 <= 1 - (1 - x)^m]. *)
+(** If [m x <= 1] then [m x / 2 <= 1 - (1 - x)^m]. (Lean:
+    [half_mul_le_one_sub_pow].) *)
 Lemma half_mul_le_one_sub_pow x (m : nat) :
   0 <= x -> x <= 1 -> m%:R * x <= 1 -> m%:R * x / 2 <= 1 - (1 - x) ^+ m.
 Proof.
@@ -57,8 +57,8 @@ move=> x0 x1 mx1; have := mul_sub_sq_le_one_sub_pow m x0 x1.
 by have := mulr_ge0 (ler0n R m) x0; nra.
 Qed.
 
-(** Lean: [pow_one_sub_le_one_div] — [(1 - x)^m <= 1 / (1 + m x)], an
-    [e]-free upper bound. *)
+(** [(1 - x)^m <= 1 / (1 + m x)], an [e]-free upper bound. (Lean:
+    [pow_one_sub_le_one_div].) *)
 Lemma pow_one_sub_le_one_div x (m : nat) :
   0 <= x -> x <= 1 -> (1 - x) ^+ m <= 1 / (1 + m%:R * x).
 Proof.
@@ -73,7 +73,7 @@ apply: le_trans (ler_wpM2l (exprn_ge0 m hx1) h2) _.
 by rewrite -exprMn; apply: exprn_ile1; nra.
 Qed.
 
-(** Lean: [one_sub_inv_le_log] — [1 - 1/x <= ln x] for [0 < x]. *)
+(** [1 - 1/x <= ln x] for [0 < x]. (Lean: [one_sub_inv_le_log].) *)
 Lemma one_sub_inv_le_ln x : 0 < x -> 1 - 1 / x <= ln x.
 Proof.
 move=> x0; have xV0 : 0 < x^-1 by rewrite invr_gt0.
@@ -102,8 +102,8 @@ rewrite (_ : 0`!%:R = 1 :> R) // (_ : 2`!%:R = 2 :> R) //.
 by move=> h; lra.
 Qed.
 
-(** Lean: [log_ge_quadratic] — quadratically tight lower bound on [ln] on
-    [[1/2, 1]]: [ln x >= (x - 1) - (x - 1)^2]. *)
+(** Quadratically tight lower bound on [ln] over [[1/2, 1]]:
+    [ln x >= (x - 1) - (x - 1)^2]. (Lean: [log_ge_quadratic].) *)
 Lemma ln_ge_quadratic x : 1 / 2 <= x -> x <= 1 -> (x - 1) - (x - 1) ^+ 2 <= ln x.
 Proof.
 move=> x12 x1; have x0 : 0 < x by lra.
@@ -120,7 +120,7 @@ have h5 : - s <= ln x by rewrite -(expRK (- s)) ler_ln ?posrE ?expR_gt0.
 by rewrite /s in h5; lra.
 Qed.
 
-(** Lean: [exp_ge_pow] — [x^k / k! <= exp x] for [x >= 0]. *)
+(** [x^k / k! <= exp x] for [x >= 0]. (Lean: [exp_ge_pow].) *)
 Lemma expR_ge_pow x (k : nat) : 0 <= x -> x ^+ k / k`!%:R <= expR x.
 Proof.
 case: k => [|k] x0.
@@ -128,12 +128,12 @@ case: k => [|k] x0.
 by apply: (le_trans _ (expR_ge1Dxn k x0)); rewrite lerDr ler01.
 Qed.
 
-(** Lean: [exp_ge_cube] — [x^3 / 6 <= exp x] for [x >= 0]. *)
+(** [x^3 / 6 <= exp x] for [x >= 0]. (Lean: [exp_ge_cube].) *)
 Lemma expR_ge_cube x : 0 <= x -> x ^+ 3 / 6 <= expR x.
 Proof. exact: expR_ge_pow 3. Qed.
 
-(** Lean: [log_le_tangent_div] — tangent-line bound on [ln] at a reference
-    point [c]: [ln L <= ln c - 1 + L / c]. *)
+(** Tangent-line bound on [ln] at a reference point [c]: [ln L <= ln c - 1 + L /
+    c]. (Lean: [log_le_tangent_div].) *)
 Lemma ln_le_tangent_div (L c : R) : 0 < L -> 0 < c -> ln L <= ln c - 1 + L / c.
 Proof.
 move=> L0 c0; have h1 : -1 < L / c - 1 by have := divr_gt0 L0 c0; lra.
@@ -141,7 +141,7 @@ have := le_ln1Dx h1; rewrite addrCA subrr addr0 ln_div ?posrE //.
 by move=> h; lra.
 Qed.
 
-(** Lean: [exp_three_ge_twenty] — [20 <= exp 3]. *)
+(** [20 <= exp 3]. (Lean: [exp_three_ge_twenty].) *)
 Lemma expR3_ge20 : (20 : R) <= expR 3.
 Proof.
 have e1 : 163 / 60 <= expR (1 : R).
@@ -157,7 +157,8 @@ rewrite e3; apply: le_trans h _.
 by rewrite ler_pXn2r ?nnegrE ?expR_ge0 //; lra.
 Qed.
 
-(** Lean: [log_log_le_of_pos] — [ln (ln x) <= 2 + ln x / 20] when [0 < ln x]. *)
+(** [ln (ln x) <= 2 + ln x / 20] when [0 < ln x]. (Lean: [log_log_le_of_pos].)
+    *)
 Lemma ln_ln_le x : 0 < ln x -> ln (ln x) <= 2 + ln x / 20.
 Proof.
 move=> hx; have := ln_le_tangent_div hx (expR_gt0 3); rewrite expRK.
@@ -166,7 +167,7 @@ have h2 : ln x / expR 3 <= ln x / 20.
 by move=> h1; lra.
 Qed.
 
-(** Lean: [two_le_of_hbig] — [30 <= ln n] already forces [2 <= n]. *)
+(** [30 <= ln n] already forces [2 <= n]. (Lean: [two_le_of_hbig].) *)
 Lemma two_le_of_ln_ge30 (n : nat) : 30 <= ln (n%:R : R) -> (2 <= n)%N.
 Proof.
 case: n => [|[|n]] //.

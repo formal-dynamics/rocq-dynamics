@@ -21,7 +21,8 @@ Variable n : nat.
 Context {R : realType}.
 Implicit Types (I : {set 'I_n}).
 
-(** Lean: [ne_univ_iff_pos_dissent]. *)
+(** Consensus has *not* been reached exactly when at least one agent
+    dissents. (Lean: [ne_univ_iff_pos_dissent].) *)
 Lemma neq_setT_dissent I :
   (I != [set: 'I_n]) = (1 <= n%:R - #|I|%:R :> R).
 Proof.
@@ -29,7 +30,9 @@ rewrite eqEcard finset.subsetT cardsT card_ord /= -ltnNge.
 by rewrite lerBrDr -[X in X + _](mulr1n 1) -natrD ler_nat add1n.
 Qed.
 
-(** Lean: [hfloor4_of_hbig]. *)
+(** The standing hypothesis [30 <= ln n] puts the dissent floor [500 ln n]
+    below [n/4], so the two saturation ranges overlap.
+    (Lean: [hfloor4_of_hbig].) *)
 Lemma floor4_of_big : 30 <= ln (n%:R : R) -> 500 * ln n%:R <= n%:R / 4 :> R.
 Proof.
 move=> hbig.
@@ -45,7 +48,7 @@ rewrite !factS fact0 !natrM in h5; rewrite !exprS expr0 in hL4.
 nra.
 Qed.
 
-(** Lean: [saturation_2b2c] — stages 2b and 2c combined. *)
+(** Stages 2b and 2c combined. (Lean: [saturation_2b2c].) *)
 Lemma saturation_2b2c I :
   30 <= ln (n%:R : R) -> n%:R - #|I|%:R <= 500 * ln n%:R :> R ->
   expList 2 (fun s : seq (Tgt3 n) => ((1 <= n%:R - #|run I s|%:R :> R))%:R : R)
@@ -74,7 +77,7 @@ rewrite avgD avg_const //.
 by have := saturation_stage2b hbig hUI; lra.
 Qed.
 
-(** Lean: [saturation_2a2b2c] — all three saturation stages combined. *)
+(** All three saturation stages combined. (Lean: [saturation_2a2b2c].) *)
 Lemma saturation_2a2b2c (I0 : {set 'I_n}) :
   30 <= ln (n%:R : R) -> n%:R - #|I0|%:R <= n%:R / 4 :> R ->
   expList (T2a n R + 2)
@@ -109,7 +112,7 @@ rewrite expListD expList_const //.
 by have := saturation_stage2a n2 hfloor4 hI0; lra.
 Qed.
 
-(** Lean: [majority3_consensus_fail_le] — main failure bound, raw form. *)
+(** Main failure bound, raw form. (Lean: [majority3_consensus_fail_le].) *)
 Theorem majority3_consensus_fail_le (I0 : {set 'I_n}) :
   30 <= ln (n%:R : R) -> n%:R * (3 / 5) <= #|I0|%:R :> R ->
   expList (10 + (T2a n R + 2))
@@ -146,7 +149,7 @@ rewrite expListD expList_const //.
 by have := growth_phase1 n1 hI0; lra.
 Qed.
 
-(** Lean: [majority3_consensus_fail_le_clean] — clean numeric bound. *)
+(** Clean numeric bound. (Lean: [majority3_consensus_fail_le_clean].) *)
 Theorem majority3_consensus_fail_le_clean (I0 : {set 'I_n}) :
   30 <= ln (n%:R : R) -> n%:R * (3 / 5) <= #|I0|%:R :> R ->
   expList (10 + (T2a n R + 2))
@@ -199,7 +202,7 @@ have : 0 <= 1 / n%:R :> R by apply: divr_ge0; rewrite ?ler01 ?ler0n.
 rewrite hterm3; lra.
 Qed.
 
-(** Lean: [majority3_consensus_whp] — the main theorem. *)
+(** The main theorem. (Lean: [majority3_consensus_whp].) *)
 Theorem majority3_consensus_whp (I0 : {set 'I_n}) :
   30 <= ln (n%:R : R) -> n%:R * (3 / 5) <= #|I0|%:R :> R ->
   1 - 500 / n%:R

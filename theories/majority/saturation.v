@@ -49,8 +49,10 @@ have := mulr_ge0 (dg0 c) t0.
 by move: E; rewrite /g /= expR0 => E; lra.
 Qed.
 
-(** Lean: [Real.le_log_one_add_of_nonneg], multiplied out: for [1 <= x],
-    [2 (x - 1) <= ln x * (x + 1)]. *)
+(** Padé-type lower bound on [ln]: for [1 <= x], [2 (x - 1) <= ln x (x + 1)].
+    This is what turns the Chernoff exponent into the quadratic form used by
+    [saturation_round_numeric]. (Lean: [Real.le_log_one_add_of_nonneg],
+    multiplied out.) *)
 Lemma ln_ge_pade (x : R) : 1 <= x -> 2 * (x - 1) <= ln x * (x + 1).
 Proof.
 move=> x1; have x0 : 0 < x by lra.
@@ -64,8 +66,8 @@ Variable n : nat.
 Context {R : realType}.
 Implicit Types (I : {set 'I_n}).
 
-(** Lean: [saturation_round_generic] — per-round upper tail from an upper
-    bound on the mean dissent. *)
+(** Per-round upper tail from an upper bound on the mean dissent. (Lean:
+    [saturation_round_generic].) *)
 Lemma saturation_round_generic I (mub k : R) :
   (1 <= n)%N -> 0 < mub -> mub <= k -> \sum_(v < n) avg (Y_dis I v) <= mub ->
   avg (fun r : Tgt3 n => ((k <= n%:R - #|step I r|%:R :> R))%:R : R)
@@ -79,7 +81,7 @@ have -> : (fun r : Tgt3 n => ((k <= n%:R - #|step I r|%:R :> R))%:R : R)
 exact: hbound.
 Qed.
 
-(** Lean: [saturation_round_closed] — closed-form per-round upper tail. *)
+(** Closed-form per-round upper tail. (Lean: [saturation_round_closed].) *)
 Lemma saturation_round_closed I (M k : R) :
   (1 <= n)%N -> 0 < M -> M <= n%:R / 4 -> 5 / 8 * M <= k ->
   n%:R - #|I|%:R <= M ->
@@ -105,7 +107,7 @@ have hq : (1 - x) * (1 + 2 * x) <= 5 / 8 by nra.
 by have := ler_wpM2l hU0 hq; lra.
 Qed.
 
-(** Lean: [saturation_mean_quad] — the mean dissent is at most [3 M^2 / n]. *)
+(** The mean dissent is at most [3 M^2 / n]. (Lean: [saturation_mean_quad].) *)
 Lemma saturation_mean_quad I (M : R) :
   (1 <= n)%N -> 0 <= M -> n%:R - #|I|%:R <= M ->
   \sum_(v < n) avg (Y_dis I v) <= 3 * M ^+ 2 / n%:R.
@@ -126,7 +128,8 @@ have hU2 : (n%:R * (1 - x)) ^+ 2 <= M ^+ 2 by rewrite ler_pXn2r ?nnegrE.
 by have := sqr_ge0 (n%:R * (1 - x)); nra.
 Qed.
 
-(** Lean: [saturation_round_numeric]. *)
+(** The same tail with the exponent put in the usable quadratic form
+    [-(k - 5M/8)^2 / (k + 5M/8)]. (Lean: [saturation_round_numeric].) *)
 Lemma saturation_round_numeric I (M k : R) :
   (1 <= n)%N -> 0 < M -> M <= n%:R / 4 -> 5 / 8 * M <= k -> 0 < k ->
   n%:R - #|I|%:R <= M ->
@@ -149,8 +152,8 @@ have h2 := ler_wpM2l (ltW k0) h1.
 by rewrite ler_pdivlMr //; lra.
 Qed.
 
-(** Lean: [saturation_round_contract] — dissent contracts by [7/10] except
-    with probability [exp(-M / 250)]. *)
+(** Dissent contracts by [7/10] except with probability [exp(-M / 250)]. (Lean:
+    [saturation_round_contract].) *)
 Lemma saturation_round_contract I (M : R) :
   (1 <= n)%N -> 0 < M -> M <= n%:R / 4 -> n%:R - #|I|%:R <= M ->
   avg (fun r : Tgt3 n => ((7 / 10 * M <= n%:R - #|step I r|%:R :> R))%:R : R)
@@ -164,20 +167,23 @@ rewrite ler_expR ler_pdivrMr; last by lra.
 by nra.
 Qed.
 
-(** Lean: [satAfter n M i = max (500 ln n) ((7/10)^i M)] — the deterministic
-    dissent target after [i] rounds. *)
+(** The deterministic dissent target after [i] rounds. (Lean: [satAfter n M i =
+    max (500 ln n) ((7/10)^i M)].) *)
 Definition satAfter (M : R) (i : nat) : R :=
   Num.max (500 * ln n%:R) ((7 / 10) ^+ i * M).
 
-(** Lean: [satAfter_ge_floor]. *)
+(** The dissent target never drops below its floor [500 ln n].
+    (Lean: [satAfter_ge_floor].) *)
 Lemma satAfter_ge_floor M i : 500 * ln n%:R <= satAfter M i.
 Proof. by rewrite /satAfter le_max lexx. Qed.
 
-(** Lean: [satAfter_zero]. *)
+(** Above the floor, the schedule starts at [M].
+    (Lean: [satAfter_zero].) *)
 Lemma satAfter0 M : 500 * ln n%:R <= M -> satAfter M 0 = M.
 Proof. by move=> h; rewrite /satAfter expr0 mul1r max_r. Qed.
 
-(** Lean: [satAfter_le_of_le]. *)
+(** The schedule stays below [n/4], the range in which the per-round
+    contraction applies. (Lean: [satAfter_le_of_le].) *)
 Lemma satAfter_le M i :
   0 <= M -> M <= n%:R / 4 -> 500 * ln n%:R <= n%:R / 4 :> R ->
   satAfter M i <= n%:R / 4.
@@ -187,7 +193,8 @@ apply: le_trans _ M1; rewrite -[leRHS]mul1r.
 by apply: ler_wpM2r => //; apply: exprn_ile1; lra.
 Qed.
 
-(** Lean: [satAfter_contract_le]. *)
+(** One step of the schedule contracts by at most [7/10], matching the
+    per-round contraction. (Lean: [satAfter_contract_le].) *)
 Lemma satAfter_contract_le M i :
   (1 <= n)%N -> 7 / 10 * satAfter M i <= satAfter M i.+1.
 Proof.
@@ -199,7 +206,7 @@ rewrite maxr_pMr; last by lra.
 by rewrite ge_max !le_max lexx orbT andbT; apply/orP; left; lra.
 Qed.
 
-(** Lean: [saturation_fail_le] — stage 2a, union bound. *)
+(** Stage 2a, union bound. (Lean: [saturation_fail_le].) *)
 Lemma saturation_fail_le (M : R) j :
   (2 <= n)%N -> 500 * ln n%:R <= M -> M <= n%:R / 4 ->
   500 * ln n%:R <= n%:R / 4 :> R ->
@@ -243,10 +250,13 @@ have hle2 : expR (- (1 / 250) * satAfter M i) <= expR (- 2 * ln n%:R).
 by rewrite -[j.+1%:R]natr1; lra.
 Qed.
 
-(** Lean: [T2a n = ⌈6 log n⌉₊]. *)
+(** Length of saturation stage 2a: the number of contraction rounds needed to
+    bring the dissent from [n/4] down to the floor.
+    (Lean: [T2a n = ⌈6 log n⌉₊].) *)
 Definition T2a : nat := ceiln (6 * ln (n%:R : R)).
 
-(** Lean: [satAfter_quarter_le_floor]. *)
+(** [T2a] rounds of the schedule do take [n/4] down to the floor [500 ln n].
+    (Lean: [satAfter_quarter_le_floor].) *)
 Lemma satAfter_quarter_le_floor :
   (2 <= n)%N -> satAfter (n%:R / 4) T2a <= 500 * ln n%:R.
 Proof.
@@ -284,7 +294,9 @@ rewrite expRN -hn mulrA mulVf ?gt_eqF // mul1r.
 by lra.
 Qed.
 
-(** Lean: [saturation_stage2a]. *)
+(** Stage 2a: from a dissent of at most [n/4], after [T2a] rounds the dissent
+    exceeds [500 ln n] with probability at most [T2a * n^(-2)].
+    (Lean: [saturation_stage2a].) *)
 Lemma saturation_stage2a (I0 : {set 'I_n}) :
   (2 <= n)%N -> 500 * ln n%:R <= n%:R / 4 :> R ->
   n%:R - #|I0|%:R <= n%:R / 4 :> R ->
@@ -302,7 +314,8 @@ case: (ltP (500 * ln n%:R) (n%:R - #|run I0 s|%:R)) => hc.
 by rewrite mulr0n ler0n.
 Qed.
 
-(** Lean: [saturation_stage2b]. *)
+(** Stage 2b: from a dissent of at most [500 ln n], one round brings it below
+    [10] except with probability [1/n]. (Lean: [saturation_stage2b].) *)
 Lemma saturation_stage2b I :
   30 <= ln n%:R :> R -> n%:R - #|I|%:R <= 500 * ln n%:R :> R ->
   avg (fun r : Tgt3 n => ((10 <= n%:R - #|step I r|%:R :> R))%:R : R)
@@ -356,7 +369,9 @@ have hlog : L - 6 * ln L <= ln (10 / mub).
 by lra.
 Qed.
 
-(** Lean: [saturation_stage2c]. *)
+(** Stage 2c: from a dissent of at most [10], one round reaches full
+    consensus except with probability [300/n].
+    (Lean: [saturation_stage2c].) *)
 Lemma saturation_stage2c I :
   (1 <= n)%N -> n%:R - #|I|%:R <= 10 :> R ->
   avg (fun r : Tgt3 n => ((1 <= n%:R - #|step I r|%:R :> R))%:R : R)

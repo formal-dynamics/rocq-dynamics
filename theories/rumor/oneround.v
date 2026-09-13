@@ -23,7 +23,9 @@ Lemma foldr_muln_map (T : Type) (g : T -> nat) (s : seq T) :
   foldr muln 1 [seq g v | v <- s] = (\prod_(v <- s) g v)%N.
 Proof. by elim: s => [|v s ih]; rewrite ?big_nil //= big_cons ih. Qed.
 
-(** Lean: [card_tgt]. *)
+(** Each of the [n] nodes independently picks one of the [n - 1] others, so a
+    round is a uniform draw from a space of size [(n - 1) ^ n].
+    (Lean: [card_tgt].) *)
 Lemma card_tgt (n : nat) : #|Tgt n| = ((n - 1) ^ n)%N.
 Proof.
 rewrite card_dep_ffun /image_mem foldr_muln_map big_enum /=.
@@ -36,7 +38,8 @@ Section OneRound.
 Variable n : nat.
 Implicit Types (I : {set 'I_n}) (r : Tgt n) (u v : 'I_n).
 
-(** Lean: [card_subtype_ne_ne]. *)
+(** The nodes distinct from two given ones — the counting input to the
+    one-round estimates. (Lean: [card_subtype_ne_ne].) *)
 Lemma card_sig_ne_ne v u :
   v != u -> #|{: {x : 'I_n | (x != v) && (x != u)}}| = (n - 2)%N.
 Proof.
@@ -48,8 +51,8 @@ have -> : #|[predC [pred x : 'I_n | (x != v) && (x != u)]]| = 2%N.
 by move=> h; rewrite -[in RHS]h addnK.
 Qed.
 
-(** Lean: [card_filter_not_contacted] — the configurations in which no
-    member of [I] targets [u]. *)
+(** The configurations in which no member of [I] targets [u]. (Lean:
+    [card_filter_not_contacted].) *)
 Lemma card_not_contacted I u :
   u \notin I ->
   #|[set r : Tgt n | [forall v in I, val (r v) != u]]|
@@ -83,7 +86,7 @@ Qed.
 
 Context {R : realType}.
 
-(** Lean: [avg_not_contacted] — the contact probability. *)
+(** The contact probability. (Lean: [avg_not_contacted].) *)
 Lemma avg_not_contacted I u :
   (2 <= n)%N -> u \notin I ->
   avg (fun r : Tgt n => (u \notin step I r)%:R : R)
@@ -115,7 +118,7 @@ rewrite -expr_div_n; congr (_ ^+ _).
 have := divff n1; lra.
 Qed.
 
-(** Lean: [avg_card_step] — expected size after one round. *)
+(** Expected size after one round. (Lean: [avg_card_step].) *)
 Lemma avg_card_step I :
   (2 <= n)%N ->
   avg (fun r : Tgt n => #|step I r|%:R : R)
@@ -144,7 +147,7 @@ have -> : (fun r : Tgt n => (u \in step I r)%:R : R)
 by rewrite avgB avg_const // avg_not_contacted.
 Qed.
 
-(** Lean: [prob_goodRound] — a good round has probability at least [1/8]. *)
+(** A good round has probability at least [1/8]. (Lean: [prob_goodRound].) *)
 Lemma prob_goodRound I :
   (2 <= n)%N -> I != finset.set0 ->
   1 / 8 <= avg (fun r : Tgt n => (goodRound I r)%:R : R).
@@ -191,8 +194,8 @@ have hgrow :
 nra.
 Qed.
 
-(** Lean: [avg_uninformed_le] — above half, the expected uninformed count
-    contracts by [2/3]. *)
+(** Above half, the expected uninformed count contracts by [2/3]. (Lean:
+    [avg_uninformed_le].) *)
 Lemma avg_uninformed_le I :
   (2 <= n)%N -> (n <= 2 * #|I|)%N ->
   avg (fun r : Tgt n => n%:R - #|step I r|%:R : R)

@@ -3,7 +3,7 @@
 # checks CI runs. The generated file is called CoqMakefile because the
 # LLM4Rocq `rocq` plugin (/rocq:checkpoint) invokes `make -f CoqMakefile`.
 
-KNOWNTARGETS := CoqMakefile clean layers admitted axioms gate
+KNOWNTARGETS := CoqMakefile clean layers admitted axioms gate docs
 KNOWNFILES   := Makefile _CoqProject
 .DEFAULT_GOAL := invoke-coqmakefile
 
@@ -16,7 +16,7 @@ CoqMakefile: Makefile _CoqProject
 invoke-coqmakefile: CoqMakefile
 	$(MAKE) --no-print-directory -f CoqMakefile $(filter-out $(KNOWNTARGETS),$(MAKECMDGOALS))
 
-.PHONY: invoke-coqmakefile clean layers admitted axioms gate $(KNOWNFILES)
+.PHONY: invoke-coqmakefile clean layers admitted axioms gate docs $(KNOWNFILES)
 
 clean:
 	-$(MAKE) --no-print-directory -f CoqMakefile cleanall 2>/dev/null
@@ -33,6 +33,14 @@ axioms: invoke-coqmakefile
 	./verify.sh --no-clean
 
 gate: layers invoke-coqmakefile admitted axioms
+
+# --- documentation -----------------------------------------------------
+# Same coqdoc output as CI: `gallinahtml` lists statements without proof
+# scripts, and index.html is the table of contents (the A-Z index of
+# identifiers is indexpage.html, see CoqMakefile.local).
+docs: CoqMakefile
+	$(MAKE) --no-print-directory -f CoqMakefile gallinahtml
+	cp html/toc.html html/index.html
 
 # Forward any other target (html, install, theories/foo.vo, ...) to CoqMakefile.
 %: invoke-coqmakefile

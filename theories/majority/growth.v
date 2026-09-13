@@ -21,40 +21,46 @@ Variable n : nat.
 Context {R : realType}.
 Implicit Types (I : {set 'I_n}).
 
-(** Lean: [growthBias j = (1/10) (11/10)^j] — the bias schedule. *)
+(** The bias schedule. (Lean: [growthBias j = (1/10) (11/10)^j].) *)
 Definition growthBias (j : nat) : R := 1 / 10 * (11 / 10) ^+ j.
 
-(** Lean: [growthBias_zero]. *)
+(** The schedule starts at the initial bias [1/10].
+    (Lean: [growthBias_zero].) *)
 Lemma growthBias0 : growthBias 0 = 1 / 10.
 Proof. by rewrite /growthBias expr0 mulr1. Qed.
 
-(** Lean: [growthBias_nonneg]. *)
+(** The schedule is nonnegative. (Lean: [growthBias_nonneg].) *)
 Lemma growthBias_ge0 j : 0 <= growthBias j.
 Proof. by rewrite /growthBias mulr_ge0 ?exprn_ge0 //; lra. Qed.
 
-(** Lean: [growthBias_mono]. *)
+(** Each round's target bias is at least the previous one.
+    (Lean: [growthBias_mono].) *)
 Lemma growthBias_leS j : growthBias j <= growthBias j.+1.
 Proof.
 rewrite /growthBias exprS.
 by have := exprn_ge0 j (_ : 0 <= 11 / 10 :> R); nra.
 Qed.
 
-(** Lean: [growthBias_le_of_le]. *)
+(** Hence the schedule is monotone in the round index.
+    (Lean: [growthBias_le_of_le].) *)
 Lemma growthBias_le i j : (i <= j)%N -> growthBias i <= growthBias j.
 Proof. by move=> ij; rewrite /growthBias ler_pM2l ?ler_eXn2l //; lra. Qed.
 
-(** Lean: [growthBias_le_quarter]. *)
+(** Up to round [9] the target bias stays below [1/4], the range in which
+    [growth_round] applies. (Lean: [growthBias_le_quarter].) *)
 Lemma growthBias_le_quarter j : (j <= 9)%N -> growthBias j <= 1 / 4.
 Proof.
 by case: j => [|[|[|[|[|[|[|[|[|[|j]]]]]]]]]] // _; rewrite /growthBias; lra.
 Qed.
 
-(** Lean: [growthBias_ten]. *)
+(** At round [10] it has passed [1/4]: ten growth rounds take the bias from
+    [1/10] past a quarter, i.e. the majority past [3/4] of the agents.
+    (Lean: [growthBias_ten].) *)
 Lemma growthBias10 : 1 / 4 < growthBias 10.
 Proof. by rewrite /growthBias; lra. Qed.
 
-(** Lean: [growth_round] — a single growth round amplifies the bias [β] by
-    [11/10] except with probability [exp(-n / 10^7)]. *)
+(** A single growth round amplifies the bias [β] by [11/10] except with
+    probability [exp(-n / 10^7)]. (Lean: [growth_round].) *)
 Lemma growth_round I (b : R) :
   (1 <= n)%N -> 1 / 10 <= b -> b <= 1 / 4 -> n%:R * (1 / 2 + b) <= #|I|%:R ->
   avg (fun r : Tgt3 n =>
@@ -115,7 +121,7 @@ have E : n%:R * a - n%:R * c - n%:R * a * ((a / c - 1) - (a / c - 1) ^+ 2)
 by have := ler_wpM2l (ltW n0) cd3; lra.
 Qed.
 
-(** Lean: [growth_fail_le] — union bound over [j] growth rounds. *)
+(** Union bound over [j] growth rounds. (Lean: [growth_fail_le].) *)
 Lemma growth_fail_le j :
   (1 <= n)%N -> forall i, (i + j <= 10)%N -> forall I,
   n%:R * (1 / 2 + growthBias i) <= #|I|%:R ->
@@ -152,8 +158,8 @@ apply: le_trans (avg_le key) _; rewrite avgD avg_const ?tgt3_gt0 //.
 by rewrite -[j.+1%:R]natr1; lra.
 Qed.
 
-(** Lean: [growth_phase1] — from a [3/5] majority, [10] rounds reach a [3/4]
-    majority except with probability [10 exp(-n / 10^7)]. *)
+(** From a [3/5] majority, [10] rounds reach a [3/4] majority except with
+    probability [10 exp(-n / 10^7)]. (Lean: [growth_phase1].) *)
 Lemma growth_phase1 (I0 : {set 'I_n}) :
   (1 <= n)%N -> n%:R * (3 / 5) <= #|I0|%:R :> R ->
   expList 10 (fun s : seq (Tgt3 n) =>

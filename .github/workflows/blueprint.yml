@@ -5,9 +5,9 @@ name: Blueprint and docs
 # every declaration cited by the blueprint exists, assembles everything under
 # the Jekyll home page and uploads the result as the `site` artifact.
 #
-# Deployment to GitHub Pages runs only on pushes to main and is best-effort:
-# Pages is not available for this repository while it is private, so the
-# deploy job is allowed to fail; the `site` artifact is always produced.
+# Deployment to GitHub Pages runs only on pushes to main and publishes
+# https://formal-dynamics.github.io/rocq-dynamics/ ; it is best-effort (the
+# deploy job is allowed to fail), and the `site` artifact is always produced.
 
 on:
   push:
@@ -100,13 +100,17 @@ jobs:
               python3 scripts/check_rocq_decls.py blueprint/rocq_decls
             endGroup
             startGroup "coqdoc"
-              make -f CoqMakefile html
+              make -f CoqMakefile gallinahtml
             endGroup
           after_script: |
             sudo chown -R 1001:116 . || true
       - name: Collect coqdoc
         run: |
           sudo chown -R "$(id -u):$(id -g)" html
+          # coqdoc puts the A-Z index of identifiers in indexpage.html
+          # (CoqMakefile.local), so <site>/docs/ can land on the table of
+          # contents -- the list of modules and their statements.
+          cp html/toc.html html/index.html
           mkdir -p site && mv html site/docs
       - uses: actions/upload-artifact@v4
         with:
@@ -145,6 +149,8 @@ jobs:
           test -f _site/blueprint/index.html
           test -f _site/blueprint.pdf
           test -f _site/docs/toc.html
+          test -f _site/docs/index.html
+          test -f _site/docs/indexpage.html
       - uses: actions/upload-artifact@v4
         with:
           name: site
