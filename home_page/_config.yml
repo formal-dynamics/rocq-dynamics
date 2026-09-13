@@ -1,8 +1,11 @@
 title: rocq-dynamics
 description: Rocq / MathComp formalizations of rumor spreading and 3-majority dynamics on the complete graph
 authors: Aakash Kumar, Maria Sofia Bucarelli and Emanuele Natale
-baseurl: ""
-url: "https://formal-dynamics.github.io/rocq-dynamics"
+# Project site: the repository path is the baseurl, so that `relative_url`
+# resolves /blueprint/ to /rocq-dynamics/blueprint/ and not to the domain
+# root. Same split as leanamycs.
+baseurl: "/rocq-dynamics"
+url: "https://formal-dynamics.github.io"
 github_username: formal-dynamics
 repository: formal-dynamics/rocq-dynamics
 
