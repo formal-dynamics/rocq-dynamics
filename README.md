@@ -48,6 +48,7 @@ coqdoc's `gallinahtml` target, so it lists statements without proof scripts. Loc
 
 ```bash
 uv tool install rocqblueprint          # needs graphviz; xelatex + latexmk for the pdf
+uv tool install plastex                # `rocqblueprint web` shells out to `plastex`
 cd blueprint/src && rocqblueprint web && rocqblueprint pdf && cd ../..
 python3 scripts/check_rocq_decls.py    # after `make`
 ```
